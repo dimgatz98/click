@@ -1,3 +1,4 @@
+from rest_framework.parsers import MultiPartParser, FormParser
 from knox.models import AuthToken
 from rest_framework import status, permissions, generics
 from rest_framework.response import Response
@@ -12,26 +13,24 @@ from .serializers import (
 
 
 class CreateUserAPIView(generics.CreateAPIView):
+    parser_classes = (MultiPartParser, FormParser)
     queryset = User.objects.all()
     serializer_class = CreateUserSerializer
 
     def post(self, request, *args, **kwargs):
         super().post(request, *args, **kwargs)
 
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data
+        login_serializer = LoginSerializer(data=request.data)
+        login_serializer.is_valid()
+        user = login_serializer.validated_data
         token = AuthToken.objects.create(user)
 
         obj = self.queryset.get(username=request.POST["username"])
 
-        data = {
-            "user": obj.pk,
-        }
-        if "image" in request.POST:
-            data["image"] = request.POST["image"],
+        data = request.data.copy()
+        data["user"] = obj.pk
 
-        profile_serializer = ProfileSerializer(data=data)
+        profile_serializer = ProfileSerializer(data=data,)
 
         if profile_serializer.is_valid():
             profile_serializer.create(profile_serializer.validated_data)
@@ -40,6 +39,7 @@ class CreateUserAPIView(generics.CreateAPIView):
                 "token": token[1]
             })
 
+        # Delete user if profile failed to be created
         obj.delete()
         err_msg = {
             "Error": "Profile data not valid",
@@ -48,6 +48,9 @@ class CreateUserAPIView(generics.CreateAPIView):
 
 
 class SignInAPIView(generics.GenericAPIView):
+    '''
+    View called to retrieve token
+    '''
     serializer_class = LoginSerializer
 
     def post(self, request, *args, **kwargs):
@@ -89,8 +92,10 @@ class DeleteUserAPIView(generics.DestroyAPIView):
     queryset = User.objects.all()
     lookup_field = ["username"]
 
+
     def delete(self, request, *args, **kwargs):
         user = self.get_object()
+
         if not token.startswith("Token "):
             err_msg = {
                 "Error": 'Token should be provided in header as follows: "Authorization: Token <digest>"'
@@ -106,13 +111,16 @@ class DeleteUserAPIView(generics.DestroyAPIView):
             }
             return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
 
+        # A user is only allowed to delete the account if they have the corresponding token
         if user.username == knox_object.user.username:
             resp = super().delete(self, request, *args, **kwargs)
             return resp
+
         err_msg = {
             "Error": "Operation not permitted"
         }
         return Response(data=err_msg, status=status.HTTP_401_UNAUTHORIZED)
+
 
     def get_object(self):
         username = self.kwargs["username"]
