@@ -1,5 +1,4 @@
-from operator import truediv
-from tkinter import image_names
+from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from rest_framework.validators import UniqueValidator
 from rest_framework import serializers
@@ -56,3 +55,14 @@ class CreateUserSerializer(serializers.ModelSerializer):
         user.save()
 
         return user
+
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField()
+
+    def validate(self, data):
+        user = authenticate(**data)
+        if user and user.is_active:
+            return user
+        raise serializers.ValidationError('Incorrect credentials.')

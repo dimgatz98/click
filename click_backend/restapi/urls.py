@@ -22,4 +22,9 @@ urlpatterns = [
         views.deleteUser,
         name="deleteUser",
     ),
+    path(
+        "login/",
+        views.signIn,
+        name="signIn",
+    ),
 ]
