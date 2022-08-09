@@ -1,13 +1,23 @@
+from operator import truediv
+from tkinter import image_names
 from django.contrib.auth.password_validation import validate_password
 from rest_framework.validators import UniqueValidator
 from rest_framework import serializers
 
-from .models import User
+from .models import User, Profile
 
 
 class UserSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = User
+        fields = "__all__"
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Profile
         fields = "__all__"
 
 
