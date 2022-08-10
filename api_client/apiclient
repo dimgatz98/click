@@ -30,15 +30,26 @@ def convert_to_request(f):
     @functools.wraps(f)
     def function(**kw):
         method, url, data, hook = f(**kw)
-        if "apikey" in kw:
-            headers = {AUTHENTICATION_HEADER: "Token %s" % kw["apikey"]}
-        else:
-            headers = {}
+
+        headers = {}
+
+        if data is not None:
+            data=dict(data)["data"]
+
+            if "token" in data:
+                headers["Authorization"] = f'Token {data["token"]}'
+
+        if "headers" in kw:
+            try:
+                for key, value in kw["headers"].items():
+                    headers[key] = value
+            except Exception as e:
+                print(e)
 
         with click_spinner.spinner():
             response = method(
                 f"{BASE_URL}{url}",
-                json=dict(data)["data"],
+                json=data,
                 hooks=dict(response=hook),
                 timeout=os.getenv("CLICK_API_TIMEOUT", 2),
                 headers=headers,
@@ -74,6 +85,9 @@ def show_data(response: requests.Response, *arg, **kwargs):
     else:
         response.raise_for_status()
 
+
+# authentication points
+
 @convert_to_command(interface)
 def register(username, email, firstname, lastname):
     passwd1 = maskpass.askpass(mask="")
@@ -94,6 +108,88 @@ def register(username, email, firstname, lastname):
         dict(data=data),
         show_data
     )
+
+
+@convert_to_command(interface)
+def login(username):
+    passwd = maskpass.askpass(mask="")
+
+    data = {
+        "username": username,
+        "password": passwd,
+    }
+
+    return (
+        requests.post,
+        "login/",
+        dict(data=data),
+        show_data
+    )
+
+
+@convert_to_command(interface)
+def logout():
+    token = maskpass.askpass(prompt="Enter token:",mask="")
+
+    data = {
+        "token": token,
+    }
+
+    return (
+        requests.post,
+        "logout/",
+        dict(data=data),
+        show_data
+    )
+
+
+@convert_to_command(interface)
+def list():
+    token = maskpass.askpass(prompt="Enter token:",mask="")
+
+    data = {
+        "token": token,
+    }
+
+    return (
+        requests.get,
+        "list/",
+        dict(data=data),
+        show_data
+    )
+
+
+@convert_to_command(interface)
+def retrieve(username):
+    token = maskpass.askpass(prompt="Enter token:",mask="")
+
+    data = {
+        "token": token,
+    }
+
+    return (
+        requests.get,
+        f"get/{username}/",
+        dict(data=data),
+        show_data
+    )
+
+
+@convert_to_command(interface)
+def delete(username):
+    token = maskpass.askpass(prompt="Enter token:",mask="")
+
+    data = {
+        "token": token,
+    }
+
+    return (
+        requests.delete,
+        f"delete/{username}/",
+        dict(data=data),
+        show_data
+    )
+
 
 if __name__ == "__main__":
     interface()

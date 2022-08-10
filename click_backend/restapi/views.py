@@ -1,4 +1,3 @@
-from tokenize import Token
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from knox.models import AuthToken
 from rest_framework import status, permissions, generics
@@ -72,13 +71,21 @@ class SignInAPIView(generics.GenericAPIView):
     serializer_class = LoginSerializer
 
     def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data
-        return Response({
-            "user": UserSerializer(user, context=self.get_serializer_context()).data,
-            "token": AuthToken.objects.create(user)[1]
-        })
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            user = serializer.validated_data
+            return Response({
+                "user": UserSerializer(user, context=self.get_serializer_context()).data,
+                "token": AuthToken.objects.create(user)[1]
+            })
+        except Exception as e:
+            # print(e)
+
+            err_msg = {
+                "message": "Invalid data"
+            }
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SignOutAPIView(generics.GenericAPIView):
@@ -175,7 +182,6 @@ def get_token(headers, *args, **kwargs):
     '''
     Function to retrieve valid token from request headers
     '''
-    print(headers["Authorization"])
     if "Authorization" not in headers:
         err_msg = {
             "Error": 'Token should be provided in header as follows: "Authorization: Token <digest>"'
@@ -183,7 +189,6 @@ def get_token(headers, *args, **kwargs):
         return None, err_msg
 
     if not headers["Authorization"].startswith("Token "):
-        print("hello\n\n\n")
         err_msg = {
             "Error": 'Token should be provided in header as follows: "Authorization: Token <digest>"'
         }
