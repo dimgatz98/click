@@ -1,0 +1,99 @@
+#!/usr/bin/python3
+
+import maskpass
+import functools
+import inspect
+import os
+
+import click
+import click_spinner
+import requests
+import urllib3
+from click_didyoumean import DYMGroup
+from click_option_group import AllOptionGroup, optgroup
+
+options = {
+    "username": click.option("--username", required=True),
+    "email": click.option("--email", required=True),
+    "username": click.option("--username", required=True),
+    "firstname": click.option("--firstname", required=True),
+    "lastname": click.option("--lastname", required=True),
+}
+
+BASE_URL = "http://localhost:8000/users/"
+AUTHENTICATION_HEADER = "Authorization"
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+def convert_to_request(f):
+    @functools.wraps(f)
+    def function(**kw):
+        method, url, data, hook = f(**kw)
+        if "apikey" in kw:
+            headers = {AUTHENTICATION_HEADER: "Token %s" % kw["apikey"]}
+        else:
+            headers = {}
+
+        with click_spinner.spinner():
+            response = method(
+                f"{BASE_URL}{url}",
+                json=dict(data)["data"],
+                hooks=dict(response=hook),
+                timeout=os.getenv("CLICK_API_TIMEOUT", 2),
+                headers=headers,
+                verify=False,
+            )
+        return response
+
+    return function
+
+
+def apply_options(f):
+    for k in reversed(inspect.signature(f).parameters.keys()):
+        f = options[k](f)
+    return f
+
+
+def convert_to_command(target, name=None):
+    def inner(f):
+        f = convert_to_request(f)
+        f = apply_options(f)
+        return target.command(name or f.__name__)(f)
+
+    return inner
+
+@click.group(cls=DYMGroup)
+def interface():
+    pass
+
+
+def show_data(response: requests.Response, *arg, **kwargs):
+    if response.status_code == 200:
+        click.echo(response.text)
+    else:
+        response.raise_for_status()
+
+@convert_to_command(interface)
+def register(username, email, firstname, lastname):
+    passwd1 = maskpass.askpass(mask="")
+    passwd2 = maskpass.askpass(prompt="Re-enter password:", mask="")
+
+    data = {
+        "username": username,
+        "first_name": firstname,
+        "last_name": lastname,
+        "email": email,
+        "password": passwd1,
+        "password2": passwd2,
+    }
+
+    return (
+        requests.post,
+        "add/",
+        dict(data=data),
+        show_data
+    )
+
+if __name__ == "__main__":
+    interface()

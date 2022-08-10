@@ -27,4 +27,9 @@ urlpatterns = [
         views.signIn,
         name="signIn",
     ),
+    path(
+        "logout/",
+        views.signOut,
+        name="signOut",
+    ),
 ]
