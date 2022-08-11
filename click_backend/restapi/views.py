@@ -25,7 +25,7 @@ class CreateUserAPIView(generics.CreateAPIView):
             super().post(request, *args, **kwargs)
 
         except Exception as e:
-            # print(e)
+            print(e)
 
             err_msg = {
                 "message": "Couldn't create user. Invalid data"
@@ -54,7 +54,7 @@ class CreateUserAPIView(generics.CreateAPIView):
                 })
 
         except Exception as e:
-            # print(e)
+            print(e)
 
             # Delete user if profile failed to be created
             obj.delete()
@@ -80,7 +80,7 @@ class SignInAPIView(generics.GenericAPIView):
                 "token": AuthToken.objects.create(user)[1]
             })
         except Exception as e:
-            # print(e)
+            print(e)
 
             err_msg = {
                 "message": "Invalid data"

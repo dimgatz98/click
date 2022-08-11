@@ -1,4 +1,3 @@
-from unittest.util import _MAX_LENGTH
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from rest_framework.validators import UniqueValidator
