@@ -1,5 +1,6 @@
 #!../venv/bin/python3
 
+import sys
 import maskpass
 import functools
 import inspect
@@ -33,7 +34,7 @@ def convert_to_request(f):
         headers = {}
 
         if data is not None:
-            data=dict(data)["data"]
+            data = dict(data)["data"]
 
             if "token" in data:
                 headers["Authorization"] = f'Token {data["token"]}'
@@ -73,6 +74,7 @@ def convert_to_command(target, name=None):
 
     return inner
 
+
 @click.group(cls=DYMGroup)
 def interface():
     pass
@@ -92,13 +94,16 @@ def register(username, email, firstname, lastname):
     passwd1 = maskpass.askpass(mask="")
     passwd2 = maskpass.askpass(prompt="Re-enter password:", mask="")
 
+    if (passwd1 != passwd2):
+        print("Passwords did not match")
+        sys.exit(0)
+
     data = {
         "username": username,
         "first_name": firstname,
         "last_name": lastname,
         "email": email,
         "password": passwd1,
-        "password2": passwd2,
     }
 
     return (
@@ -128,7 +133,7 @@ def login(username):
 
 @convert_to_command(interface)
 def logout():
-    token = maskpass.askpass(prompt="Enter token:",mask="")
+    token = maskpass.askpass(prompt="Enter token:", mask="")
 
     data = {
         "token": token,
@@ -144,7 +149,7 @@ def logout():
 
 @convert_to_command(interface)
 def list():
-    token = maskpass.askpass(prompt="Enter token:",mask="")
+    token = maskpass.askpass(prompt="Enter token:", mask="")
 
     data = {
         "token": token,
@@ -160,7 +165,7 @@ def list():
 
 @convert_to_command(interface)
 def retrieve(username):
-    token = maskpass.askpass(prompt="Enter token:",mask="")
+    token = maskpass.askpass(prompt="Enter token:", mask="")
 
     data = {
         "token": token,
@@ -176,7 +181,7 @@ def retrieve(username):
 
 @convert_to_command(interface)
 def delete(username):
-    token = maskpass.askpass(prompt="Enter token:",mask="")
+    token = maskpass.askpass(prompt="Enter token:", mask="")
 
     data = {
         "token": token,

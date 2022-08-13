@@ -3,7 +3,7 @@
 Start app:
 ``` bash
 # Create database
-$ python manage.py makemigrations restapi && python manage.py migrate restapi && python manage.py makemigrations && python manage.py migrate
+$ python manage.py makemigrations && python manage.py migrate
 # Create media folder
 # change your working directory to the top-level directory of the repository and run the following:
 $ mkdir -p click_backend/media/profile_pics/

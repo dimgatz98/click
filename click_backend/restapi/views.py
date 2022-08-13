@@ -5,11 +5,14 @@ from rest_framework.response import Response
 
 from .models import User
 from .serializers import (
-                CreateUserSerializer,
-                UserSerializer,
-                ProfileSerializer,
-                LoginSerializer,
-            )
+    CreateUserSerializer,
+    UserSerializer,
+    ProfileSerializer,
+    LoginSerializer,
+)
+
+
+# CRUD views
 
 
 class CreateUserAPIView(generics.CreateAPIView):
@@ -45,13 +48,13 @@ class CreateUserAPIView(generics.CreateAPIView):
 
             profile_serializer = ProfileSerializer(data=data,)
 
-            if profile_serializer.is_valid(raise_exception=True):
-                profile_serializer.create(profile_serializer.validated_data)
+            profile_serializer.is_valid(raise_exception=True)
+            profile_serializer.create(profile_serializer.validated_data)
 
-                return Response({
-                    "user": UserSerializer(user, context=self.get_serializer_context()).data,
-                    "token": token[1]
-                })
+            return Response({
+                "user": UserSerializer(user, context=self.get_serializer_context()).data,
+                "token": token[1]
+            })
 
         except Exception as e:
             print(e)
@@ -61,7 +64,7 @@ class CreateUserAPIView(generics.CreateAPIView):
             err_msg = {
                 "Error": "Profile data not valid",
             }
-            return Response(data = err_msg, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SignInAPIView(generics.GenericAPIView):
@@ -98,7 +101,8 @@ class SignOutAPIView(generics.GenericAPIView):
 
     def post(self, request, *args, **kwargs):
 
-        knox_object, err_msg = get_token(request.headers.copy(), *args, **kwargs)
+        knox_object, err_msg = get_token(
+            request.headers.copy(), *args, **kwargs)
         if not err_msg is None:
             return Response(
                 data={"message": err_msg},
@@ -151,11 +155,11 @@ class DeleteUserAPIView(generics.DestroyAPIView):
     queryset = User.objects.all()
     lookup_field = ["username"]
 
-
     def delete(self, request, *args, **kwargs):
         user = self.get_object()
 
-        knox_object, err_msg = get_token(request.headers.copy(), *args, **kwargs)
+        knox_object, err_msg = get_token(
+            request.headers.copy(), *args, **kwargs)
         if not err_msg is None:
             return Response(
                 data={"message": err_msg},
@@ -171,7 +175,6 @@ class DeleteUserAPIView(generics.DestroyAPIView):
             "Error": "Operation not permitted"
         }
         return Response(data=err_msg, status=status.HTTP_401_UNAUTHORIZED)
-
 
     def get_object(self):
         username = self.kwargs["username"]
@@ -195,7 +198,8 @@ def get_token(headers, *args, **kwargs):
         return None, err_msg
 
     token = headers["Authorization"].split(" ")[1]
-    knox_object = AuthToken.objects.filter(token_key__startswith=token[:8]).first()
+    knox_object = AuthToken.objects.filter(
+        token_key__startswith=token[:8]).first()
 
     if knox_object is None:
         err_msg = {
