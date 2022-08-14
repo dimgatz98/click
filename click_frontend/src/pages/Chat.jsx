@@ -8,6 +8,7 @@ export default function Chat() {
   const chatSocket = new WebSocket(
     publicWebSocket
   );
+  const currentUser = JSON.parse(localStorage.getItem(process.env.REACT_APP_STORAGE_USER_KEY));
 
   const navigate = useNavigate();
 
@@ -21,7 +22,7 @@ export default function Chat() {
     <>
       <Container>
         <div className="container">
-          <ChatContainer socket={chatSocket} />
+          <ChatContainer currentUser={currentUser} socket={chatSocket} />
         </div>
       </Container>
     </>

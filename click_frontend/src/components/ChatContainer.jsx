@@ -5,22 +5,15 @@ import Logout from "./Logout";
 import { v4 as uuidv4 } from "uuid";
 import { useNavigate } from "react-router-dom";
 
-export default function ChatContainer({ socket }) {
+export default function ChatContainer({ currentUser, socket }) {
   const [messages, setMessages] = useState([]);
   const scrollRef = useRef();
   const [arrivalMessage, setArrivalMessage] = useState(null);
-  const [currentUser, setCurrentUser] = useState(undefined);
   const navigate = useNavigate();
 
-  useEffect(async () => {
+  useEffect(() => {
     if (!localStorage.getItem(process.env.REACT_APP_STORAGE_USER_KEY)) {
       navigate("/login");
-    } else {
-      setCurrentUser(
-        await JSON.parse(
-          localStorage.getItem(process.env.REACT_APP_STORAGE_USER_KEY)
-        )
-      );
     }
   }, []);
 
