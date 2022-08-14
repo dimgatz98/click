@@ -18,8 +18,8 @@ export default function Login() {
     theme: "dark",
   };
   useEffect(() => {
-    if (localStorage.getItem(process.env.STORAGE_TOKEN_KEY)) {
-      navigate("/home");
+    if (localStorage.getItem(process.env.REACT_APP_STORAGE_TOKEN_KEY)) {
+      navigate("/chat");
     }
   }, []);
 
@@ -56,12 +56,15 @@ export default function Login() {
 
       if (responseData.status === 200) {
         localStorage.setItem(
-          process.env.STORAGE_TOKEN_KEY,
-          JSON.stringify(responseData.user)
+          process.env.REACT_APP_STORAGE_USER_KEY,
+          JSON.stringify(responseData.data.user)
+        );
+        localStorage.setItem(
+          process.env.REACT_APP_STORAGE_TOKEN_KEY,
+          JSON.stringify(responseData.data.token)
         );
 
-        alert("Successfuly logged in!");
-        navigate("/home");
+        navigate("/chat");
       } else {
         toast.error(responseData.data.message, toastOptions);
       }

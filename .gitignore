@@ -52,6 +52,6 @@ docs/_build/
 db.sqlite3
 migrations
 venv
-media/
+click_backend/media/
 node_modules
 package-lock.json

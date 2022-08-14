@@ -26,8 +26,8 @@ export default function Register() {
   });
 
   useEffect(() => {
-    if (localStorage.getItem(process.env.STORAGE_TOKEN_KEY)) {
-      navigate("/");
+    if (localStorage.getItem(process.env.REACT_APP_STORAGE_TOKEN_KEY)) {
+      navigate("/chat");
     }
   }, []);
 
@@ -83,10 +83,14 @@ export default function Register() {
 
       if (responseData.status === 200) {
         localStorage.setItem(
-          process.env.STORAGE_TOKEN_KEY,
+          process.env.REACT_APP_STORAGE_USER_KEY,
+          JSON.stringify(responseData.data.user)
+        );
+        localStorage.setItem(
+          process.env.REACT_APP_STORAGE_TOKEN_KEY,
           JSON.stringify(responseData.data.token)
         );
-        navigate("/login");
+        navigate("/chat");
       } else {
         toast.error(responseData.message, toastOptions);
       }

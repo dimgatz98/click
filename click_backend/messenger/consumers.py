@@ -25,6 +25,8 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
         message = text_data_json['message']
         username = text_data_json['username']
 
+        # Also save messages to db
+
         await self.channel_layer.group_send(
             self.room_group_name,
             {

@@ -185,6 +185,7 @@ def get_token(headers, *args, **kwargs):
     '''
     Function to retrieve valid token from request headers
     '''
+
     if "Authorization" not in headers:
         err_msg = {
             "Error": 'Token should be provided in header as follows: "Authorization: Token <digest>"'
