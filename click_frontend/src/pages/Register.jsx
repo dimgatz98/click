@@ -178,12 +178,13 @@ const FormContainer = styled.div`
   form {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 0.8rem;
     background-color: #00000076;
     border-radius: 2rem;
     padding: 3rem 5rem;
   }
   input {
+    height: 1rem;
     background-color: transparent;
     padding: 1rem;
     border: 0.1rem solid #4e0eff;
