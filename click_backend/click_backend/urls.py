@@ -15,9 +15,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from restapi import urls
+from restapi import user_urls, chat_urls
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('users/', include(urls)),
+    path('users/', include(user_urls)),
+    path('chat/', include(chat_urls)),
 ]

@@ -1,4 +1,4 @@
-# Backend
+# Frontend
 
 Install dependencies:
 

@@ -1,5 +1,6 @@
 #!./venv/bin/python3
 
+import json
 import sys
 import maskpass
 import functools
@@ -18,9 +19,16 @@ options = {
     "username": click.option("--username", required=True),
     "firstname": click.option("--firstname", required=True),
     "lastname": click.option("--lastname", required=True),
+    "users": click.option("--users", required=True, multiple=True),
+    "room_name": click.option("--room-name", required=True),
+    "text": click.option("--text", required=True),
+    "chat": click.option("--chat", required=True),
+    "contacts": click.option("--contacts", required=True, multiple=True),
 }
 
-BASE_URL = "http://localhost:8000/users/"
+BASE_URL = "http://localhost:8000/"
+USERS_ENDPOINT = "users/"
+CHAT_ENDPOINT = "chat/"
 AUTHENTICATION_HEADER = "Authorization"
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -31,20 +39,31 @@ def convert_to_request(f):
     def function(**kw):
         method, url, data, hook = f(**kw)
 
-        headers = {}
+        headers = {
+            "Origin": "http://localhost.com:3000/",
+        }
 
         if data is not None:
-            data = dict(data)["data"]
+            if "headers" in data:
+                try:
+                    for key, value in data["headers"].items():
+                        headers[key] = value
+                except Exception as e:
+                    click.echo(e)
 
-            if "token" in data:
-                headers["Authorization"] = f'Token {data["token"]}'
+            if "data" in data:
+                data = dict(data)["data"]
+            else:
+                data = {}
+        else:
+            data = {}
 
         if "headers" in kw:
             try:
                 for key, value in kw["headers"].items():
                     headers[key] = value
             except Exception as e:
-                print(e)
+                click.echo(e)
 
         with click_spinner.spinner():
             response = method(
@@ -81,22 +100,26 @@ def interface():
 
 
 def show_data(response: requests.Response, *arg, **kwargs):
-    if response.status_code == 200:
+    if not (response.status_code > 300):
         click.echo(response.text)
     else:
-        response.raise_for_status()
+        try:
+            err_msg = json.loads(response.content)
+            click.echo(err_msg["Error"])
+        except:
+            click.echo("Something went wrong")
 
 
-# authentication points
+# authentication endpoints
 
-@convert_to_command(interface)
+@ convert_to_command(interface)
 def register(username, email, firstname, lastname):
     passwd1 = maskpass.askpass(mask="")
     passwd2 = maskpass.askpass(prompt="Re-enter password:", mask="")
 
     if (passwd1 != passwd2):
-        print("Passwords did not match")
-        sys.exit(0)
+        click.echo("Passwords did not match")
+        sys.exit(1)
 
     data = {
         "username": username,
@@ -108,13 +131,13 @@ def register(username, email, firstname, lastname):
 
     return (
         requests.post,
-        "add/",
+        f"{USERS_ENDPOINT}add/",
         dict(data=data),
         show_data
     )
 
 
-@convert_to_command(interface)
+@ convert_to_command(interface)
 def login(username):
     passwd = maskpass.askpass(mask="")
 
@@ -125,72 +148,155 @@ def login(username):
 
     return (
         requests.post,
-        "login/",
+        "{USERS_ENDPOINT}login/",
         dict(data=data),
         show_data
     )
 
 
-@convert_to_command(interface)
+@ convert_to_command(interface)
 def logout():
     token = maskpass.askpass(prompt="Enter token:", mask="")
 
     data = {
-        "token": token,
+        "headers": {
+            "Authorization": f"Token {token}"
+        },
     }
 
     return (
         requests.post,
-        "logout/",
-        dict(data=data),
+        "{USERS_ENDPOINT}logout/",
+        data,
         show_data
     )
 
 
-@convert_to_command(interface)
+@ convert_to_command(interface)
 def list():
     token = maskpass.askpass(prompt="Enter token:", mask="")
 
     data = {
-        "token": token,
+        "headers": {
+            "Authorization": f"Token {token}"
+        },
     }
 
     return (
         requests.get,
-        "list/",
-        dict(data=data),
+        "{USERS_ENDPOINT}list/",
+        data,
         show_data
     )
 
 
-@convert_to_command(interface)
+@ convert_to_command(interface)
 def retrieve(username):
     token = maskpass.askpass(prompt="Enter token:", mask="")
 
     data = {
-        "token": token,
+        "headers": {
+            "Authorization": f"Token {token}"
+        },
     }
 
     return (
         requests.get,
-        f"get/{username}/",
+        f"{USERS_ENDPOINT}get/{username}/",
         dict(data=data),
         show_data
     )
 
 
-@convert_to_command(interface)
+@ convert_to_command(interface)
 def delete(username):
     token = maskpass.askpass(prompt="Enter token:", mask="")
 
     data = {
-        "token": token,
+        "headers": {
+            "Authorization": f"Token {token}"
+        },
     }
 
     return (
         requests.delete,
-        f"delete/{username}/",
-        dict(data=data),
+        f"{USERS_ENDPOINT}delete/{username}/",
+        data,
+        show_data
+    )
+
+
+# chat endpoints
+
+@ convert_to_command(interface)
+def create_chat(users, room_name):
+    token = maskpass.askpass(prompt="Enter token:", mask="")
+
+    if len(users) == 1:
+        click.echo("The length of --users should be greater than 1")
+        sys.exit(1)
+
+    data = {
+        "headers": {
+            "Authorization": f"Token {token}"
+        },
+        "data": {
+            "participants": users,
+            "room_name": room_name,
+        }
+    }
+
+    return (
+        requests.post,
+        f"{CHAT_ENDPOINT}create/",
+        data,
+        show_data
+    )
+
+
+@ convert_to_command(interface)
+def save_message(text, chat):
+    token = maskpass.askpass(prompt="Enter token:", mask="")
+
+    data = {
+        "headers": {
+            "Authorization": f"Token {token}"
+        },
+        "data": {
+            "text": text,
+            "chat": chat,
+        }
+    }
+
+    return (
+        requests.post,
+        f"{CHAT_ENDPOINT}save_message/",
+        data,
+        show_data
+    )
+
+
+@ convert_to_command(interface)
+def add_contacts(contacts):
+    token = maskpass.askpass(prompt="Enter token:", mask="")
+
+    contacts_list = []
+    for contact in contacts:
+        contacts_list.append(contact)
+
+    data = {
+        "headers": {
+            "Authorization": f"Token {token}"
+        },
+        "data": {
+            "contacts": contacts_list,
+        }
+    }
+
+    return (
+        requests.put,
+        f"{USERS_ENDPOINT}contacts/add/",
+        data,
         show_data
     )
 

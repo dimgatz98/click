@@ -13,6 +13,7 @@ Start app:
 
 ```bash
 # Create database
+$ python manage.py makemigrations restapi && python manage.py migrate restapi
 $ python manage.py makemigrations && python manage.py migrate
 # Create media folder
 $ mkdir -p media/profile_pics/

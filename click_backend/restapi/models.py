@@ -4,6 +4,7 @@ from PIL import Image
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
     email = models.EmailField(unique=True)
@@ -15,10 +16,19 @@ class User(AbstractUser):
 
 
 class Profile(models.Model):
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
     user = models.OneToOneField(
-        User, unique=True, related_name="profile", on_delete=models.CASCADE
+        User,
+        unique=True,
+        related_name="profile",
+        on_delete=models.CASCADE
     )
     image = models.ImageField(default="default.jpeg", upload_to="profile_pics")
+    contacts = models.ManyToManyField(
+        User,
+        related_name="contact",
+        blank=True,
+    )
 
     def __str__(self):
         return f"{self.user.username}"
@@ -34,4 +44,26 @@ class Profile(models.Model):
             img.save(self.image.path)
 
 
-# Create models to save messages from channels
+class Chat(models.Model):
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
+    # admin = models.ForeignKey(User)
+    participants = models.ManyToManyField(User, related_name='chat')
+    created = models.DateTimeField(auto_now_add=True)
+    room_name = models.CharField(max_length=50)
+
+    def __str__(self):
+        return f"{self.id}"
+
+
+class Message(models.Model):
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
+    created = models.DateTimeField(auto_now_add=True, editable=False)
+    chat = models.ForeignKey(
+        Chat,
+        on_delete=models.CASCADE,
+        related_name="message",
+    )
+    text = models.TextField(max_length=1000)
+
+    def __str__(self):
+        return f"{self.id}"

@@ -1,14 +1,17 @@
+from django.http import QueryDict
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from knox.models import AuthToken
 from rest_framework import status, permissions, generics
 from rest_framework.response import Response
 
-from .models import User
-from .serializers import (
+from ..utils.utils import get_user_from_token, get_token, validate_contact
+from ..models import User, Profile
+from ..serializers import (
     CreateUserSerializer,
     UserSerializer,
     ProfileSerializer,
     LoginSerializer,
+    UpdateContactsSerializer,
 )
 
 
@@ -38,6 +41,7 @@ class CreateUserAPIView(generics.CreateAPIView):
         try:
             login_serializer = LoginSerializer(data=request.data)
             login_serializer.is_valid(raise_exception=True)
+
             user = login_serializer.validated_data
             token = AuthToken.objects.create(user)
 
@@ -122,7 +126,8 @@ class ListUserAPIView(generics.ListAPIView):
     View called to list all existing users
     '''
     permission_classes = [
-        permissions.IsAuthenticated
+        permissions.IsAuthenticated,
+        permissions.IsAdminUser,
     ]
     serializer_class = UserSerializer
     queryset = User.objects.all()
@@ -133,7 +138,8 @@ class RetrieveUserAPIView(generics.RetrieveAPIView):
     View called to retrieve data for a single user
     '''
     permission_classes = [
-        permissions.IsAuthenticated
+        permissions.IsAuthenticated,
+        permissions.IsAdminUser,
     ]
     serializer_class = UserSerializer
     queryset = User.objects.all()
@@ -158,8 +164,10 @@ class DeleteUserAPIView(generics.DestroyAPIView):
     def delete(self, request, *args, **kwargs):
         user = self.get_object()
 
-        knox_object, err_msg = get_token(
-            request.headers.copy(), *args, **kwargs)
+        token_user = get_user_from_token(
+            request.headers.copy(), *args, **kwargs
+        )
+
         if not err_msg is None:
             return Response(
                 data={"message": err_msg},
@@ -167,7 +175,7 @@ class DeleteUserAPIView(generics.DestroyAPIView):
             )
 
         # A user is only allowed to delete the account if they have the corresponding token
-        if user.username == knox_object.user.username:
+        if user.username == token_user.username:
             resp = super().delete(self, request, *args, **kwargs)
             return resp
 
@@ -181,34 +189,51 @@ class DeleteUserAPIView(generics.DestroyAPIView):
         return generics.get_object_or_404(User, username=username)
 
 
-def get_token(headers, *args, **kwargs):
-    '''
-    Function to retrieve valid token from request headers
-    '''
+class AddContactView(generics.UpdateAPIView):
+    parser_classes = (MultiPartParser, JSONParser)
+    serializer_class = UpdateContactsSerializer
+    queryset = Profile.objects.all()
+    permission_classes = [
+        permissions.IsAuthenticated,
+    ]
 
-    if "Authorization" not in headers:
-        err_msg = {
-            "Error": 'Token should be provided in header as follows: "Authorization: Token <digest>"'
+    def put(self, request, *args, **kwargs):
+        print(request.data)
+
+        user, err = get_user_from_token(
+            request.headers.copy(), *args, **kwargs
+        )
+        if (err is not None):
+            return Response(data=err, status=status.HTTP_400_BAD_REQUEST)
+        self.kwargs["username"] = user.username
+
+        err = validate_contact(request.data.copy())
+        if (err is not None):
+            return Response(data=err, status=status.HTTP_400_BAD_REQUEST)
+
+        instance = self.get_object()
+        # Old contacts
+        contacts = list([x.id for x in instance.contacts.all()])
+        # New contacts
+        new_contacts = request.data.getlist('contacts') if isinstance(
+            request.data, QueryDict) else request.data['contacts']
+        contacts.extend(new_contacts)
+
+        print("\n\nnew_contacts:", contacts)
+
+        data = {
+            "contacts": contacts
         }
-        return None, err_msg
+        serializer = self.get_serializer(
+            instance, data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
-    if not headers["Authorization"].startswith("Token "):
-        err_msg = {
-            "Error": 'Token should be provided in header as follows: "Authorization: Token <digest>"'
-        }
-        return None, err_msg
-
-    token = headers["Authorization"].split(" ")[1]
-    knox_object = AuthToken.objects.filter(
-        token_key__startswith=token[:8]).first()
-
-    if knox_object is None:
-        err_msg = {
-            "Error": "Invalid token"
-        }
-        return None, err_msg
-
-    return knox_object, None
+    def get_object(self):
+        username = self.kwargs["username"]
+        user_id = User.objects.all().get(username=username).id
+        return generics.get_object_or_404(Profile, user=user_id)
 
 
 signIn = SignInAPIView.as_view()
@@ -217,3 +242,4 @@ deleteUser = DeleteUserAPIView.as_view()
 retrieveUser = RetrieveUserAPIView.as_view()
 listUsers = ListUserAPIView.as_view()
 createUser = CreateUserAPIView.as_view()
+addContact = AddContactView.as_view()

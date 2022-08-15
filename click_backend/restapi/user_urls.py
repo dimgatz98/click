@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from .views import user_views as views
 
 urlpatterns = [
     # CRUD
@@ -32,5 +32,10 @@ urlpatterns = [
         "logout/",
         views.signOut,
         name="signOut",
+    ),
+    path(
+        "contacts/add/",
+        views.addContact,
+        name="addContact",
     ),
 ]

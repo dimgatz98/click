@@ -1,9 +1,15 @@
+from wsgiref import validate
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from rest_framework.validators import UniqueValidator
 from rest_framework import serializers
 
-from .models import User, Profile
+from .models import (
+    User,
+    Profile,
+    Chat,
+    Message
+)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -17,7 +23,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ("user", "image")
+        fields = "__all__"
 
 
 class CreateUserSerializer(serializers.ModelSerializer):
@@ -70,3 +76,46 @@ class LoginSerializer(serializers.Serializer):
         if user and user.is_active:
             return user
         raise serializers.ValidationError('Incorrect credentials.')
+
+
+class ChatSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Chat
+        fields = "__all__"
+
+    def create(self, validated_data):
+        chat = Chat.objects.create(
+            room_name=validated_data['room_name'],
+        )
+        chat.participants.set(validated_data['participants'])
+        chat.save()
+
+        return chat
+
+
+class MessageSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Message
+        fields = "__all__"
+
+    def create(self, validated_data):
+
+        print("validated_data:", validated_data)
+
+        message = Message.objects.create(
+            text=validated_data['text'],
+            chat=validated_data['chat']
+        )
+
+        message.save()
+
+        return message
+
+
+class UpdateContactsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Profile
+        fields = ("contacts",)
