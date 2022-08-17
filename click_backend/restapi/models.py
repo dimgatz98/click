@@ -50,7 +50,7 @@ class Chat(models.Model):
     participants = models.ManyToManyField(User, related_name='chat')
     created = models.DateTimeField(auto_now_add=True, editable=False)
     room_name = models.CharField(max_length=50, unique=True)
-    last_message = models.DateTimeField(auto_now_add=True)
+    last_message = models.DateTimeField()
 
     def __str__(self):
         return f"{self.id}"

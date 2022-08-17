@@ -4,48 +4,63 @@ import ChatInput from "./ChatInput";
 import Logout from "./Logout";
 import { v4 as uuidv4 } from "uuid";
 import { useNavigate } from "react-router-dom";
-import { saveMessageRoute, retrieveChatRoute, retrieveChatMessagesRoute } from "../utils/APIRoutes"
-import axios from "axios";
+import {
+  updateLastMessage,
+  saveMessageRoute,
+  retrieveChatMessagesRoute,
+} from "../utils/APIRoutes"
+import axios from 'axios';
 
 export default function ChatContainer({ currentChat, socket }) {
   const [messages, setMessages] = useState([]);
-  const scrollRef = useRef();
   const [arrivalMessage, setArrivalMessage] = useState(null);
-  const [username, setUsername] = useState("");
+  const [user, setUser] = useState("");
+  const [username, setUsername] = useState(undefined);
   const navigate = useNavigate();
+  const scrollRef = useRef();
+
+  const if401Logout = (response) => {
+    console.log(response);
+    if (response.status === 401) {
+      localStorage.clear();
+      navigate("/login");
+    }
+  };
+
   useEffect(async () => {
-    setUsername(
+    setUser(
       await JSON.parse(
         localStorage.getItem(process.env.REACT_APP_STORAGE_USER_KEY)
-      ).username
+      )
     );
   }, []);
 
   useEffect(async () => {
-    const token = JSON.parse(localStorage.getItem(process.env.REACT_APP_STORAGE_TOKEN_KEY));
-    const headers = {
-      'Authorization': `Token ${token}`,
-    };
+    if (user) {
+      setUsername(
+        user.username
+      )
+    }
+  }, [user]);
 
-    const response = await axios.get(`${retrieveChatMessagesRoute}${currentChat}/`, { headers: headers });
-    console.log("messages:");
-    console.log(response);
-    const existing_messages = response.data.map((dict) => {
-      return dict.sent_from === username ? { fromSelf: true, message: dict.text } : { fromSelf: false, message: dict.text };
-    });
-    setMessages(existing_messages);
-  }, [currentChat]);
+  useEffect(async () => {
+    if (username) {
+      const token = JSON.parse(localStorage.getItem(process.env.REACT_APP_STORAGE_TOKEN_KEY));
+      const headers = {
+        'Authorization': `Token ${token}`,
+      };
 
-  // useEffect(() => {
-  //   const getCurrentChat = async () => {
-  //     if (currentChat) {
-  //       await JSON.parse(
-  //         localStorage.getItem(process.env.REACT_APP_STORAGE_USER_KEY)
-  //       ).id;
-  //     }
-  //   };
-  //   getCurrentChat();
-  // }, [currentChat]);
+      const response = await axios.get(`${retrieveChatMessagesRoute}${currentChat.id}/`, { headers: headers })
+        .catch((error) => {
+          if401Logout(error.response)
+        });
+
+      const existing_messages = response.data.map((dict) => {
+        return dict.sent_from === username ? { fromSelf: true, message: dict.text } : { fromSelf: false, message: dict.text };
+      });
+      setMessages(existing_messages);
+    }
+  }, [currentChat, username]);
 
   useEffect(() => {
     if (!localStorage.getItem(process.env.REACT_APP_STORAGE_USER_KEY)) {
@@ -59,20 +74,32 @@ export default function ChatContainer({ currentChat, socket }) {
       'Authorization': `Token ${token}`,
     };
 
-    const chat = await axios.get(`${retrieveChatRoute}${currentChat}/`, { headers: headers })
-    console.log(chat.data);
-
     const messageData = {
       "text": msg,
-      "chat": chat.data.id,
-      "sent_from": username
+      "chat": currentChat.id,
+      "sent_from": username,
     };
 
-    await axios.post(`${saveMessageRoute}`, messageData, { headers: headers });
+    // save new message in db
+    await axios.post(`${saveMessageRoute}`, messageData, { headers: headers })
+      .catch((error) => {
+        if401Logout(error.response)
+      });
+    const m = new Date();
+    const dateString =
+      m.getUTCFullYear() + "-" +
+      ("0" + (m.getUTCMonth() + 1)).slice(-2) + "-" +
+      ("0" + m.getUTCDate()).slice(-2) + "T" +
+      ("0" + m.getUTCHours()).slice(-2) + ":" +
+      ("0" + m.getUTCMinutes()).slice(-2) + ":" +
+      ("0" + m.getUTCSeconds()).slice(-2);
 
     // update last_message field in Chat model when new message is sent
-
-    socket.send(JSON.stringify({
+    await axios.patch(`${updateLastMessage}${currentChat.id}/`, { "last_message": dateString }, { headers: headers })
+      .catch((error) => {
+        if401Logout(error.response)
+      });
+    socket.current.send(JSON.stringify({
       'message': msg,
       'username': username,
     }));
@@ -83,13 +110,15 @@ export default function ChatContainer({ currentChat, socket }) {
   };
 
   useEffect(() => {
-    socket.onmessage = (e) => {
-      const data = JSON.parse(e.data);
-      if (!(data.username === username)) {
-        setArrivalMessage({ fromSelf: false, message: data.message });
+    if (socket.current) {
+      socket.current.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if (!(data.username === username)) {
+          setArrivalMessage({ fromSelf: false, message: data.message });
+        }
       }
     }
-  }, []);
+  }, [socket]);
 
   useEffect(() => {
     arrivalMessage && setMessages((prev) => [...prev, arrivalMessage]);

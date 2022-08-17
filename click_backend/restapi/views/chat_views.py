@@ -1,16 +1,21 @@
+from asyncio import as_completed
+from logging import root
 from rest_framework.parsers import JSONParser
 from rest_framework import status, permissions, generics
 from rest_framework.response import Response
 
 from ..models import (
     Chat,
-    Message
+    Message,
+    User,
 )
 from ..serializers import (
     ChatSerializer,
     MessageSerializer,
+    ChatLastMessageSerializer,
 )
 
+from ..utils.utils import get_user_from_token
 
 # Chat views
 
@@ -26,8 +31,10 @@ class CreateChatView(generics.CreateAPIView):
     queryset = Chat.objects.all()
     serializer_class = ChatSerializer
 
+    # Delete this method when in production
     def post(self, request):
         try:
+            print("data:", request.data)
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
@@ -47,11 +54,11 @@ class RetrieveChatView(generics.RetrieveAPIView):
     ]
     queryset = Chat.objects.all()
     serializer_class = ChatSerializer
-    lookup_field = ["room_name"]
+    lookup_field = ["chat_id"]
 
     def get_object(self):
-        room_name = self.kwargs["room_name"]
-        return generics.get_object_or_404(Chat, room_name=room_name)
+        chat_id = self.kwargs["chat_id"]
+        return generics.get_object_or_404(Chat, id=chat_id)
 
 
 class ListChatsAPIView(generics.ListAPIView):
@@ -64,6 +71,30 @@ class ListChatsAPIView(generics.ListAPIView):
     serializer_class = ChatSerializer
     lookup_field = ["username"]
 
+    def get(self, request, *args, **kwargs):
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+
+            serializer = self.get_serializer(queryset, many=True)
+
+            data = list([dict(x) for x in serializer.data])
+            for i, chat in enumerate(serializer.data):
+                participant_usernames = []
+                for participant in dict(chat)["participants"]:
+                    user = User.objects.get(id=participant)
+                    participant_usernames.append(user.username)
+                data[i]["participants"] = participant_usernames
+
+            return Response(data)
+        except Exception as e:
+            print(e)
+            return Response({}, status=status.HTTP_400_BAD_REQUEST)
+
     def get_queryset(self):
         username = self.kwargs["username"]
         chat_ids = []
@@ -72,6 +103,38 @@ class ListChatsAPIView(generics.ListAPIView):
                 chat_ids.append(chat.id)
 
         return Chat.objects.filter(id__in=chat_ids).order_by('last_message')
+
+
+class UpdateLastMessageChatView(generics.UpdateAPIView):
+    '''
+    View called to update chat's data from users who participate in this chat
+    '''
+    permission_classes = [
+        permissions.IsAuthenticated,
+    ]
+    serializer_class = ChatLastMessageSerializer
+    lookup_field = ["chat_id"]
+
+    def patch(self, request, *args, **kwargs):
+        try:
+            user, err = get_user_from_token(request.headers.copy())
+            if (err is not None):
+                return Response(data=err, status=status.HTTP_400_BAD_REQUEST)
+            chat = Chat.objects.get(id=kwargs["chat_id"])
+            for participant in chat.participants.all():
+                if participant.id == user.id:
+                    return super().patch(request, *args, **kwargs)
+            err_msg = {
+                "Error": "You are not allowed to modify this chat"
+            }
+            return Response(data=err_msg, status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            print(e)
+            return Response({}, status=status.HTTP_400_BAD_REQUEST)
+
+    def get_object(self):
+        chat_id = self.kwargs["chat_id"]
+        return generics.get_object_or_404(Chat, id=chat_id)
 
 
 class SaveMessageView(generics.CreateAPIView):
@@ -85,6 +148,7 @@ class SaveMessageView(generics.CreateAPIView):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
 
+    # Delete this method when in production
     def post(self, request):
         try:
             serializer = self.get_serializer(data=request.data)
@@ -105,11 +169,10 @@ class ListMessagesAPIView(generics.ListAPIView):
         permissions.IsAuthenticated,
     ]
     serializer_class = MessageSerializer
-    lookup_field = ["room_name"]
+    lookup_field = ["chat_id"]
 
     def get_queryset(self):
-        room_name = self.kwargs["room_name"]
-        chat_id = Chat.objects.get(room_name=room_name).id
+        chat_id = self.kwargs["chat_id"]
         return Message.objects.filter(chat=chat_id).order_by('created')
 
 
@@ -118,3 +181,4 @@ saveMessage = SaveMessageView.as_view()
 retrieveChat = RetrieveChatView.as_view()
 listMessages = ListMessagesAPIView.as_view()
 listChats = ListChatsAPIView.as_view()
+updateLastMessageChat = UpdateLastMessageChatView.as_view()

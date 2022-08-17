@@ -1,5 +1,6 @@
 #!./venv/bin/python3
 
+from datetime import datetime
 import json
 import sys
 import maskpass
@@ -243,6 +244,7 @@ def create_chat(users, room_name):
         "data": {
             "participants": users,
             "room_name": room_name,
+            "last_message": str(datetime.now()),
         }
     }
 

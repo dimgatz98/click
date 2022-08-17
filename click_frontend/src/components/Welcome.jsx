@@ -2,14 +2,23 @@ import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import Robot from "../media/robot.gif";
 export default function Welcome({ currentUser }) {
+  const [user, setUser] = useState("");
   const [username, setUsername] = useState("");
   useEffect(async () => {
-    setUsername(
+    setUser(
       await JSON.parse(
         localStorage.getItem(process.env.REACT_APP_STORAGE_USER_KEY)
-      ).username
+      )
     );
   }, []);
+
+  useEffect(async () => {
+    if (user) {
+      setUsername(
+        user.username
+      );
+    }
+  }, [user]);
 
   return (
     <Container>

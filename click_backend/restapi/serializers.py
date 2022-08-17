@@ -1,3 +1,4 @@
+from statistics import mode
 from wsgiref import validate
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
@@ -87,6 +88,7 @@ class ChatSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         chat = Chat.objects.create(
             room_name=validated_data['room_name'],
+            last_message=validated_data['last_message'],
         )
         chat.participants.set(validated_data['participants'])
         chat.save()
@@ -102,11 +104,10 @@ class MessageSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
 
-        print("validated_data:", validated_data)
-
         message = Message.objects.create(
             text=validated_data['text'],
-            chat=validated_data['chat']
+            chat=validated_data['chat'],
+            sent_from=validated_data['sent_from']
         )
 
         message.save()
@@ -119,3 +120,10 @@ class ContactsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = ("contacts",)
+
+
+class ChatLastMessageSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Chat
+        fields = ("last_message",)

@@ -12,11 +12,9 @@ export default function Logout() {
       'Authorization': `Token ${token}`,
     }
 
-    const data = await axios.post(`${logoutRoute}`, {}, {headers: headers});
-    if (data.status === 200) {
-      localStorage.clear();
-      navigate("/login");
-    }
+    await axios.post(`${logoutRoute}`, {}, { headers: headers });
+    localStorage.clear();
+    navigate("/login");
   };
   return (
     <Button onClick={handleClick}>

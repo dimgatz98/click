@@ -2,20 +2,29 @@ import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import Logo from "../media/logo.svg";
 
-export default function Contacts({ contacts, changeChat, currentUser }) {
+export default function Contacts({ contacts, changeChat }) {
   const [currentSelected, setCurrentSelected] = useState(undefined);
+  const [user, setUser] = useState("");
   const [username, setUsername] = useState("");
   const changeCurrentChat = (index, contact) => {
     setCurrentSelected(index);
     changeChat(contact);
   };
+
   useEffect(async () => {
-    setUsername(
+    setUser(
       await JSON.parse(
         localStorage.getItem(process.env.REACT_APP_STORAGE_USER_KEY)
-      ).username
+      )
     );
   }, []);
+  useEffect(async () => {
+    if (user) {
+      setUsername(
+        user.username
+      )
+    }
+  }, [user]);
 
   return (
     <>
@@ -29,13 +38,13 @@ export default function Contacts({ contacts, changeChat, currentUser }) {
             {contacts.map((contact, index) => {
               return (
                 <div
-                  key={contact._id}
+                  key={contact.id}
                   className={`contact ${index === currentSelected ? "selected" : ""
                     }`}
                   onClick={() => changeCurrentChat(index, contact)}
                 >
                   <div className="username">
-                    <h3>{contact}</h3>
+                    <h3>{contact.username}</h3>
                   </div>
                 </div>
               );

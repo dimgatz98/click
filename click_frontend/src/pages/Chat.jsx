@@ -1,23 +1,28 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { publicWebSocket } from "../utils/APIRoutes";
+import { webSocketRoute } from "../utils/APIRoutes";
 import ChatContainer from "../components/ChatContainer";
 import Contacts from "../components/Contacts";
 import Welcome from "../components/Welcome";
 import { listChatsRoute } from "../utils/APIRoutes";
 import axios from "axios";
 
-export default function ChlistChatsRouteat() {
+export default function Chat() {
   const [contacts, setContacts] = useState([]);
   const [currentChat, setCurrentChat] = useState(undefined);
   const [currentUser, setCurrentUser] = useState(undefined);
-
-  const chatSocket = new WebSocket(
-    publicWebSocket
-  );
+  const socket = useRef(undefined);
 
   const navigate = useNavigate();
+
+  const if401Logout = (response) => {
+    if (response.status === 401) {
+      localStorage.clear();
+      navigate("/login");
+    }
+  };
+
 
   useEffect(() => {
     if (!localStorage.getItem(process.env.REACT_APP_STORAGE_TOKEN_KEY) ||
@@ -38,18 +43,32 @@ export default function ChlistChatsRouteat() {
         'Authorization': `Token ${token}`,
       };
 
-      const data = await axios.get(`${listChatsRoute}${currentUser.username}/`, { headers: headers });
-      const chats = data.data.map((chat) => {
-        for (const id of chat.participants) {
-          if (!(id === currentUser.id)) {
-            return id;
+      const response = await axios.get(`${listChatsRoute}${currentUser.username}/`, { headers: headers })
+        .catch((error) => {
+          if401Logout(error.response)
+        });
+      const chats = response.data.map((chat) => {
+        for (const username of chat.participants) {
+          if (!(username === currentUser.username)) {
+            return {
+              username: username, id: chat.id
+            };
           }
         };
-      })
+      });
 
       setContacts(chats);
     }
   }, [currentUser]);
+
+  useEffect(async () => {
+    if (currentChat) {
+      const validID = currentChat.id.replaceAll('-', '');
+      socket.current = new WebSocket(
+        `${webSocketRoute}${validID}/`
+      );
+    }
+  }, [currentChat]);
 
   const handleChatChange = (chat) => {
     setCurrentChat(chat);
@@ -59,11 +78,11 @@ export default function ChlistChatsRouteat() {
     <>
       <Container>
         <div className="container">
-          <Contacts contacts={contacts} changeChat={handleChatChange} currentUserName={currentUser} />
+          <Contacts contacts={contacts} changeChat={handleChatChange} />
           {currentChat === undefined ? (
             <Welcome />
           ) : (
-            <ChatContainer currentChat={currentChat} socket={chatSocket} />
+            <ChatContainer currentChat={currentChat} socket={socket} />
           )}
         </div>
       </Container>

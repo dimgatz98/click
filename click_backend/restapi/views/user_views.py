@@ -34,7 +34,7 @@ class CreateUserAPIView(generics.CreateAPIView):
             print(e)
 
             err_msg = {
-                "message": "Couldn't create user. Invalid data"
+                "Error": "Couldn't create user. Invalid data"
             }
             return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
 
@@ -90,7 +90,7 @@ class SignInAPIView(generics.GenericAPIView):
             print(e)
 
             err_msg = {
-                "message": "Invalid data"
+                "Error": "Invalid data"
             }
             return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
 
@@ -109,14 +109,17 @@ class SignOutAPIView(generics.GenericAPIView):
             request.headers.copy(), *args, **kwargs)
         if not err_msg is None:
             return Response(
-                data={"message": err_msg},
+                data=err_msg,
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         knox_object.delete()
 
+        err_msg = {
+            "Error": "Token deleted successfuly"
+        }
         return Response(
-            data={"message": "Token deleted successfuly"},
+            data=err_msg,
             status=status.HTTP_200_OK,
         )
 
@@ -164,13 +167,13 @@ class DeleteUserAPIView(generics.DestroyAPIView):
     def delete(self, request, *args, **kwargs):
         user = self.get_object()
 
-        token_user = get_user_from_token(
+        token_user, err = get_user_from_token(
             request.headers.copy(), *args, **kwargs
         )
 
-        if not err_msg is None:
+        if not err is None:
             return Response(
-                data={"message": err_msg},
+                data=err,
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -216,8 +219,6 @@ class AddContactView(generics.UpdateAPIView):
         new_contacts = request.data.getlist('contacts') if isinstance(
             request.data, QueryDict) else request.data['contacts']
         contacts.extend(new_contacts)
-
-        print("\n\nnew_contacts:", contacts)
 
         data = {
             "contacts": contacts
