@@ -12,4 +12,19 @@ urlpatterns = [
         views.saveMessage,
         name="saveMessage",
     ),
+    path(
+        "retrieve/<str:room_name>/",
+        views.retrieveChat,
+        name="retrieveChat",
+    ),
+    path(
+        "messages/list/<str:room_name>/",
+        views.listMessages,
+        name="listMessages",
+    ),
+    path(
+        "list/<str:username>/",
+        views.listChats,
+        name="listChats",
+    ),
 ]

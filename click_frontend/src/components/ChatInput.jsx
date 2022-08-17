@@ -49,7 +49,7 @@ const Container = styled.div`
     gap: 1rem;
   }
   .input-container {
-    width: 100%;
+    width: 65%;
     border-radius: 2rem;
     display: flex;
     align-items: center;

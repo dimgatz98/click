@@ -38,4 +38,10 @@ urlpatterns = [
         views.addContact,
         name="addContact",
     ),
+
+    path(
+        "contacts/list/",
+        views.listContacts,
+        name="listContacts",
+    ),
 ]

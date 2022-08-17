@@ -148,7 +148,7 @@ def login(username):
 
     return (
         requests.post,
-        "{USERS_ENDPOINT}login/",
+        f"{USERS_ENDPOINT}login/",
         dict(data=data),
         show_data
     )
@@ -166,7 +166,7 @@ def logout():
 
     return (
         requests.post,
-        "{USERS_ENDPOINT}logout/",
+        f"{USERS_ENDPOINT}logout/",
         data,
         show_data
     )
@@ -184,7 +184,7 @@ def list():
 
     return (
         requests.get,
-        "{USERS_ENDPOINT}list/",
+        f"{USERS_ENDPOINT}list/",
         data,
         show_data
     )
@@ -296,6 +296,24 @@ def add_contacts(contacts):
     return (
         requests.put,
         f"{USERS_ENDPOINT}contacts/add/",
+        data,
+        show_data
+    )
+
+
+@ convert_to_command(interface)
+def list_chats(username):
+    token = maskpass.askpass(prompt="Enter token:", mask="")
+
+    data = {
+        "headers": {
+            "Authorization": f"Token {token}"
+        },
+    }
+
+    return (
+        requests.get,
+        f"{CHAT_ENDPOINT}list/{username}/",
         data,
         show_data
     )

@@ -48,8 +48,9 @@ class Chat(models.Model):
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
     # admin = models.ForeignKey(User)
     participants = models.ManyToManyField(User, related_name='chat')
-    created = models.DateTimeField(auto_now_add=True)
-    room_name = models.CharField(max_length=50)
+    created = models.DateTimeField(auto_now_add=True, editable=False)
+    room_name = models.CharField(max_length=50, unique=True)
+    last_message = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.id}"
@@ -63,6 +64,7 @@ class Message(models.Model):
         on_delete=models.CASCADE,
         related_name="message",
     )
+    sent_from = models.CharField(max_length=150)
     text = models.TextField(max_length=1000)
 
     def __str__(self):

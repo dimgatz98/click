@@ -4,12 +4,48 @@ import ChatInput from "./ChatInput";
 import Logout from "./Logout";
 import { v4 as uuidv4 } from "uuid";
 import { useNavigate } from "react-router-dom";
+import { saveMessageRoute, retrieveChatRoute, retrieveChatMessagesRoute } from "../utils/APIRoutes"
+import axios from "axios";
 
-export default function ChatContainer({ currentUser, socket }) {
+export default function ChatContainer({ currentChat, socket }) {
   const [messages, setMessages] = useState([]);
   const scrollRef = useRef();
   const [arrivalMessage, setArrivalMessage] = useState(null);
+  const [username, setUsername] = useState("");
   const navigate = useNavigate();
+  useEffect(async () => {
+    setUsername(
+      await JSON.parse(
+        localStorage.getItem(process.env.REACT_APP_STORAGE_USER_KEY)
+      ).username
+    );
+  }, []);
+
+  useEffect(async () => {
+    const token = JSON.parse(localStorage.getItem(process.env.REACT_APP_STORAGE_TOKEN_KEY));
+    const headers = {
+      'Authorization': `Token ${token}`,
+    };
+
+    const response = await axios.get(`${retrieveChatMessagesRoute}${currentChat}/`, { headers: headers });
+    console.log("messages:");
+    console.log(response);
+    const existing_messages = response.data.map((dict) => {
+      return dict.sent_from === username ? { fromSelf: true, message: dict.text } : { fromSelf: false, message: dict.text };
+    });
+    setMessages(existing_messages);
+  }, [currentChat]);
+
+  // useEffect(() => {
+  //   const getCurrentChat = async () => {
+  //     if (currentChat) {
+  //       await JSON.parse(
+  //         localStorage.getItem(process.env.REACT_APP_STORAGE_USER_KEY)
+  //       ).id;
+  //     }
+  //   };
+  //   getCurrentChat();
+  // }, [currentChat]);
 
   useEffect(() => {
     if (!localStorage.getItem(process.env.REACT_APP_STORAGE_USER_KEY)) {
@@ -17,19 +53,29 @@ export default function ChatContainer({ currentUser, socket }) {
     }
   }, []);
 
-  // get old messages from database when connecting to the chat
-
   const handleSendMsg = async (msg) => {
-    const data = await JSON.parse(
-      localStorage.getItem(process.env.REACT_APP_STORAGE_USER_KEY)
-    );
+    const token = JSON.parse(localStorage.getItem(process.env.REACT_APP_STORAGE_TOKEN_KEY));
+    const headers = {
+      'Authorization': `Token ${token}`,
+    };
+
+    const chat = await axios.get(`${retrieveChatRoute}${currentChat}/`, { headers: headers })
+    console.log(chat.data);
+
+    const messageData = {
+      "text": msg,
+      "chat": chat.data.id,
+      "sent_from": username
+    };
+
+    await axios.post(`${saveMessageRoute}`, messageData, { headers: headers });
+
+    // update last_message field in Chat model when new message is sent
 
     socket.send(JSON.stringify({
       'message': msg,
-      'username': data.username,
+      'username': username,
     }));
-
-    // save messages to database
 
     const msgs = [...messages];
     msgs.push({ fromSelf: true, message: msg });
@@ -39,7 +85,7 @@ export default function ChatContainer({ currentUser, socket }) {
   useEffect(() => {
     socket.onmessage = (e) => {
       const data = JSON.parse(e.data);
-      if (!(data.username === currentUser.username)) {
+      if (!(data.username === username)) {
         setArrivalMessage({ fromSelf: false, message: data.message });
       }
     }
@@ -58,7 +104,7 @@ export default function ChatContainer({ currentUser, socket }) {
       <div className="chat-header">
         <div className="user-details">
           <div className="chat-name">
-            <h3>Public chat</h3>
+            <h3>{currentChat.username}</h3>
           </div>
         </div>
         <Logout />
@@ -68,9 +114,8 @@ export default function ChatContainer({ currentUser, socket }) {
           return (
             <div ref={scrollRef} key={uuidv4()}>
               <div
-                className={`message ${
-                  message.fromSelf ? "sended" : "recieved"
-                }`}
+                className={`message ${message.fromSelf ? "sended" : "recieved"
+                  }`}
               >
                 <div className="content ">
                   <p>{message.message}</p>
@@ -87,7 +132,7 @@ export default function ChatContainer({ currentUser, socket }) {
 
 const Container = styled.div`
   height: 85vh;
-  width: 85vw;
+  width: 52.5vw;
   display: grid;
   grid-template-rows: 10% 80% 10%;
   gap: 0.1rem;

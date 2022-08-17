@@ -11,7 +11,7 @@ from ..serializers import (
     UserSerializer,
     ProfileSerializer,
     LoginSerializer,
-    UpdateContactsSerializer,
+    ContactsSerializer,
 )
 
 
@@ -191,15 +191,13 @@ class DeleteUserAPIView(generics.DestroyAPIView):
 
 class AddContactView(generics.UpdateAPIView):
     parser_classes = (MultiPartParser, JSONParser)
-    serializer_class = UpdateContactsSerializer
+    serializer_class = ContactsSerializer
     queryset = Profile.objects.all()
     permission_classes = [
         permissions.IsAuthenticated,
     ]
 
     def put(self, request, *args, **kwargs):
-        print(request.data)
-
         user, err = get_user_from_token(
             request.headers.copy(), *args, **kwargs
         )
@@ -236,6 +234,32 @@ class AddContactView(generics.UpdateAPIView):
         return generics.get_object_or_404(Profile, user=user_id)
 
 
+class ListContactsAPIView(generics.RetrieveAPIView):
+    '''
+    View called to list all contacts of a specific user
+    '''
+    permission_classes = [
+        permissions.IsAuthenticated
+    ]
+    serializer_class = ContactsSerializer
+    queryset = Profile.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        user, err = get_user_from_token(
+            request.headers.copy(), *args, **kwargs
+        )
+        if (err is not None):
+            return Response(data=err, status=status.HTTP_400_BAD_REQUEST)
+        self.kwargs["username"] = user.username
+
+        return super().get(request, *args, **kwargs)
+
+    def get_object(self):
+        username = self.kwargs["username"]
+        user_id = User.objects.all().get(username=username).id
+        return generics.get_object_or_404(Profile, user=user_id)
+
+
 signIn = SignInAPIView.as_view()
 signOut = SignOutAPIView.as_view()
 deleteUser = DeleteUserAPIView.as_view()
@@ -243,3 +267,4 @@ retrieveUser = RetrieveUserAPIView.as_view()
 listUsers = ListUserAPIView.as_view()
 createUser = CreateUserAPIView.as_view()
 addContact = AddContactView.as_view()
+listContacts = ListContactsAPIView.as_view()

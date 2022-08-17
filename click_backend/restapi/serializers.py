@@ -114,7 +114,7 @@ class MessageSerializer(serializers.ModelSerializer):
         return message
 
 
-class UpdateContactsSerializer(serializers.ModelSerializer):
+class ContactsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
