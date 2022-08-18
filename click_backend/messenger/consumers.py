@@ -1,11 +1,8 @@
-from channels.db import database_sync_to_async
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
-# from ..restapi.models import Chat, Message, User
 
 
 class ChatRoomConsumer(AsyncWebsocketConsumer):
-
     async def connect(self):
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.room_group_name = 'chat_%s' % self.room_name
@@ -45,3 +42,5 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
             'message': message,
             'username': username,
         }))
+
+    pass

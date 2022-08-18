@@ -14,8 +14,7 @@ import axios from 'axios';
 export default function ChatContainer({ currentChat, socket }) {
   const [messages, setMessages] = useState([]);
   const [arrivalMessage, setArrivalMessage] = useState(null);
-  const [user, setUser] = useState("");
-  const [username, setUsername] = useState(undefined);
+  const [user, setUser] = useState(undefined);
   const navigate = useNavigate();
   const scrollRef = useRef();
 
@@ -29,7 +28,7 @@ export default function ChatContainer({ currentChat, socket }) {
 
   useEffect(async () => {
     setUser(
-      await JSON.parse(
+      JSON.parse(
         localStorage.getItem(process.env.REACT_APP_STORAGE_USER_KEY)
       )
     );
@@ -37,14 +36,6 @@ export default function ChatContainer({ currentChat, socket }) {
 
   useEffect(async () => {
     if (user) {
-      setUsername(
-        user.username
-      )
-    }
-  }, [user]);
-
-  useEffect(async () => {
-    if (username) {
       const token = JSON.parse(localStorage.getItem(process.env.REACT_APP_STORAGE_TOKEN_KEY));
       const headers = {
         'Authorization': `Token ${token}`,
@@ -56,11 +47,11 @@ export default function ChatContainer({ currentChat, socket }) {
         });
 
       const existing_messages = response.data.map((dict) => {
-        return dict.sent_from === username ? { fromSelf: true, message: dict.text } : { fromSelf: false, message: dict.text };
+        return dict.sent_from === user.username ? { fromSelf: true, message: dict.text } : { fromSelf: false, message: dict.text };
       });
       setMessages(existing_messages);
     }
-  }, [currentChat, username]);
+  }, [currentChat, user]);
 
   useEffect(() => {
     if (!localStorage.getItem(process.env.REACT_APP_STORAGE_USER_KEY)) {
@@ -77,7 +68,7 @@ export default function ChatContainer({ currentChat, socket }) {
     const messageData = {
       "text": msg,
       "chat": currentChat.id,
-      "sent_from": username,
+      "sent_from": user.username,
     };
 
     // save new message in db
@@ -101,7 +92,7 @@ export default function ChatContainer({ currentChat, socket }) {
       });
     socket.current.send(JSON.stringify({
       'message': msg,
-      'username': username,
+      'username': user.username,
     }));
 
     const msgs = [...messages];
@@ -112,13 +103,14 @@ export default function ChatContainer({ currentChat, socket }) {
   useEffect(() => {
     if (socket.current) {
       socket.current.onmessage = (e) => {
+        console.log(user, user.username);
         const data = JSON.parse(e.data);
-        if (!(data.username === username)) {
+        if (!(data.username === user.username)) {
           setArrivalMessage({ fromSelf: false, message: data.message });
         }
       }
     }
-  }, [socket]);
+  }, [socket.current]);
 
   useEffect(() => {
     arrivalMessage && setMessages((prev) => [...prev, arrivalMessage]);
