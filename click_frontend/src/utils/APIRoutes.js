@@ -9,6 +9,7 @@ export const updateLastMessage = `${host}chat/update/`;
 export const retrieveChatRoute = `${host}chat/retrieve/`
 export const retrieveChatMessagesRoute = `${host}chat/messages/list/`
 export const listChatsRoute = `${host}chat/list/`
+export const sendRequestRoute = `${host}chat/requests/send/`
 export const requestsListRoute = `${host}chat/requests/list/`
 export const requestsDeleteRoute = `${host}chat/requests/delete/`
 export const createChat = `${host}chat/create/`
