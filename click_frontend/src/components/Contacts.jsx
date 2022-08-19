@@ -44,7 +44,7 @@ export default function Contacts({ contacts, changeChat }) {
                   onClick={() => changeCurrentChat(index, contact)}
                 >
                   <div className="username">
-                    <h3>{contact.username}</h3>
+                    <h3>{(contact === undefined) ? "" : contact.username}</h3>
                   </div>
                 </div>
               );

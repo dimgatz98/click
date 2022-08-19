@@ -1,6 +1,12 @@
+import uuid
+from email import charset
 from django.http import QueryDict
 from knox.models import AuthToken
-from ..models import User
+from ..models import (
+    FriendRequest,
+    User,
+    Chat,
+)
 
 
 def get_token(headers, *args, **kwargs):
@@ -78,7 +84,30 @@ def validate_contact(data, *args, **kwargs):
 
 def request_exists(sent_from, received_from):
     try:
-        User.objects.filter(sent_from=sent_from, received_from=received_from)
+        requests = FriendRequest.objects.filter(
+            sent_from=sent_from,
+            received_from=received_from,
+        )
+        if (len(requests) == 0):
+            return False
         return True
     except:
+        return False
+
+
+def chat_exists(participants: list):
+    try:
+        if (not isinstance(participants[0], uuid.UUID)):
+            participants = list([uuid.UUID(p) for p in participants])
+
+        participants = set(participants)
+        chats = Chat.objects.all()
+        for chat in chats:
+            chat_participants = set(list(
+                [user.id for user in chat.participants.all()]
+            ))
+            if (chat_participants == participants):
+                return True
+        return False
+    except Exception as e:
         return False

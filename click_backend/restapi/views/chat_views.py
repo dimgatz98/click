@@ -1,4 +1,6 @@
 from email.policy import HTTP
+from functools import partial
+from os import stat
 from rest_framework.parsers import JSONParser
 from rest_framework import status, permissions, generics
 from rest_framework.response import Response
@@ -18,6 +20,7 @@ from ..serializers import (
 )
 
 from ..utils.utils import (
+    chat_exists,
     get_user_from_token,
     request_exists
 )
@@ -39,6 +42,36 @@ class CreateChatView(generics.CreateAPIView):
     # Delete this method when in production
     def post(self, request):
         try:
+            if len(request.data["participants"]) == 0:
+                return Response(
+                    {
+                        "Error":
+                        "Participants list can't be empty"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            s = set()
+            for participant in request.data["participants"]:
+                if participant not in s:
+                    s.add(participant)
+                    continue
+                return Response(
+                    {
+                        "Error":
+                        "Each user can be included in the chat at most once"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if (chat_exists(list(request.data["participants"]))):
+                return Response(
+                    {
+                        "Error":
+                        "Chat already exists"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
@@ -203,6 +236,14 @@ class SendRequestView(generics.CreateAPIView):
                 username=data["received_from"]
             ).id
             data["sent_from"] = user.id
+            if (data["sent_from"] == data["received_from"]):
+                err_msg = {
+                    "Error": "Sender and receiver have to be different"
+                }
+                return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
+
+            if (chat_exists([data["sent_from"], data["received_from"]])):
+                return Response({"Error": "Chat exists"}, status=status.HTTP_400_BAD_REQUEST)
 
             if (request_exists(data["sent_from"], data["received_from"])):
                 return Response({"Error": "Request exists"}, status=status.HTTP_400_BAD_REQUEST)
