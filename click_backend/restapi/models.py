@@ -49,7 +49,7 @@ class Chat(models.Model):
     # admin = models.ForeignKey(User)
     participants = models.ManyToManyField(User, related_name='chat')
     created = models.DateTimeField(auto_now_add=True, editable=False)
-    room_name = models.CharField(max_length=50, unique=True)
+    room_name = models.CharField(max_length=50, default="")
     last_message = models.DateTimeField()
 
     def __str__(self):
@@ -66,6 +66,24 @@ class Message(models.Model):
     )
     sent_from = models.CharField(max_length=150)
     text = models.TextField(max_length=1000)
+
+    def __str__(self):
+        return f"{self.id}"
+
+
+class FriendRequest(models.Model):
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
+    sent_from = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="sent",
+    )
+    received_from = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="received",
+    )
+    created = models.DateTimeField(auto_now_add=True, editable=False)
 
     def __str__(self):
         return f"{self.id}"

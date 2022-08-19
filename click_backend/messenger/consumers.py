@@ -42,5 +42,3 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
             'message': message,
             'username': username,
         }))
-
-    pass

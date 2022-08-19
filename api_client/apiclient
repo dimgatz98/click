@@ -25,6 +25,7 @@ options = {
     "text": click.option("--text", required=True),
     "chat": click.option("--chat", required=True),
     "contacts": click.option("--contacts", required=True, multiple=True),
+    "received_from": click.option("--received-from", required=True),
 }
 
 BASE_URL = "http://localhost:8000/"
@@ -316,6 +317,45 @@ def list_chats(username):
     return (
         requests.get,
         f"{CHAT_ENDPOINT}list/{username}/",
+        data,
+        show_data
+    )
+
+
+@ convert_to_command(interface)
+def list_requests():
+    token = maskpass.askpass(prompt="Enter token:", mask="")
+
+    data = {
+        "headers": {
+            "Authorization": f"Token {token}"
+        },
+    }
+
+    return (
+        requests.get,
+        f"{CHAT_ENDPOINT}requests/list/",
+        data,
+        show_data
+    )
+
+
+@ convert_to_command(interface)
+def send_request(received_from):
+    token = maskpass.askpass(prompt="Enter token:", mask="")
+
+    data = {
+        "headers": {
+            "Authorization": f"Token {token}"
+        },
+        "data": {
+            "received_from": received_from,
+        }
+    }
+
+    return (
+        requests.post,
+        f"{CHAT_ENDPOINT}requests/send/",
         data,
         show_data
     )

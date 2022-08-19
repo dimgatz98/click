@@ -1,11 +1,11 @@
-from asyncio import as_completed
-from logging import root
+from email.policy import HTTP
 from rest_framework.parsers import JSONParser
 from rest_framework import status, permissions, generics
 from rest_framework.response import Response
 
 from ..models import (
     Chat,
+    FriendRequest,
     Message,
     User,
 )
@@ -13,9 +13,14 @@ from ..serializers import (
     ChatSerializer,
     MessageSerializer,
     ChatLastMessageSerializer,
+    FriendRequestSerializer,
+    ListRequestSerializer,
 )
 
-from ..utils.utils import get_user_from_token
+from ..utils.utils import (
+    get_user_from_token,
+    request_exists
+)
 
 # Chat views
 
@@ -34,7 +39,6 @@ class CreateChatView(generics.CreateAPIView):
     # Delete this method when in production
     def post(self, request):
         try:
-            print("data:", request.data)
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
@@ -102,7 +106,7 @@ class ListChatsAPIView(generics.ListAPIView):
             if username in [x.username for x in chat.participants.all()]:
                 chat_ids.append(chat.id)
 
-        return Chat.objects.filter(id__in=chat_ids).order_by('last_message')
+        return Chat.objects.filter(id__in=chat_ids).order_by('-last_message')
 
 
 class UpdateLastMessageChatView(generics.UpdateAPIView):
@@ -176,9 +180,111 @@ class ListMessagesAPIView(generics.ListAPIView):
         return Message.objects.filter(chat=chat_id).order_by('created')
 
 
+class SendRequestView(generics.CreateAPIView):
+    '''
+    View called to send friend request to a user
+    '''
+    parser_classes = (JSONParser,)
+    permission_classes = [
+        permissions.IsAuthenticated,
+    ]
+    serializer_class = FriendRequestSerializer
+
+    def post(self, request, *args, **kwargs):
+        try:
+            data = request.data.copy()
+            user, err = get_user_from_token(
+                request.headers.copy(), *args, **kwargs
+            )
+            if (err is not None):
+                return Response(data=err, status=status.HTTP_400_BAD_REQUEST)
+
+            data["received_from"] = User.objects.get(
+                username=data["received_from"]
+            ).id
+            data["sent_from"] = user.id
+
+            if (request_exists(data["sent_from"], data["received_from"])):
+                return Response({"Error": "Request exists"}, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except Exception as e:
+            print(e)
+            err_msg = {
+                "Error": "Invalid data"
+            }
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ListRequestsView(generics.ListAPIView):
+    permission_classes = [
+        permissions.IsAuthenticated
+    ]
+    serializer_class = ListRequestSerializer
+
+    def get(self, request, *args, **kwargs):
+        try:
+            self.kwargs["headers"] = request.headers.copy()
+            queryset = self.filter_queryset(self.get_queryset())
+
+            for query in queryset:
+                query.sent_from_username = User.objects.get(
+                    id=query.sent_from.id
+                ).username
+                query.received_from_username = User.objects.get(
+                    id=query.received_from.id
+                ).username
+
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            print(e)
+            err_msg = {
+                "Error": "Invalid data"
+            }
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
+
+    def get_queryset(self, *args, **kwargs):
+        user, _ = get_user_from_token(self.kwargs["headers"])
+        return FriendRequest.objects.filter(received_from=user.id).order_by('-created')
+
+
+class DeleteRequestView(generics.DestroyAPIView):
+    permission_classes = [
+        permissions.IsAuthenticated
+    ]
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            print(request.data)
+            self.kwargs["id"] = request.data['id']
+            return super().delete(request, *args, **kwargs)
+        except Exception as e:
+            print(e)
+            err_msg = {
+                "Error": "Invalid data"
+            }
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
+
+    def get_object(self, *args, **kwargs):
+        return FriendRequest.objects.get(id=self.kwargs["id"])
+
+
 createChat = CreateChatView.as_view()
 saveMessage = SaveMessageView.as_view()
 retrieveChat = RetrieveChatView.as_view()
 listMessages = ListMessagesAPIView.as_view()
 listChats = ListChatsAPIView.as_view()
 updateLastMessageChat = UpdateLastMessageChatView.as_view()
+sendRequest = SendRequestView.as_view()
+listRequests = ListRequestsView.as_view()
+deleteRequest = DeleteRequestView.as_view()

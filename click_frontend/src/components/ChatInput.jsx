@@ -49,7 +49,10 @@ const Container = styled.div`
     gap: 1rem;
   }
   .input-container {
-    width: 65%;
+    position: relative;
+    top: -0.13rem;
+    right: -4.3rem;
+    width: 70%;
     border-radius: 2rem;
     display: flex;
     align-items: center;

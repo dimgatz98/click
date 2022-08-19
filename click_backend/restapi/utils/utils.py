@@ -74,3 +74,11 @@ def validate_contact(data, *args, **kwargs):
             "Error": "some users do not exist"
         }
         return err_msg
+
+
+def request_exists(sent_from, received_from):
+    try:
+        User.objects.filter(sent_from=sent_from, received_from=received_from)
+        return True
+    except:
+        return False

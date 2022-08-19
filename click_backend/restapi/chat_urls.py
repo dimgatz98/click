@@ -32,4 +32,19 @@ urlpatterns = [
         views.updateLastMessageChat,
         name="updateLastMessageChat",
     ),
+    path(
+        "requests/list/",
+        views.listRequests,
+        name="listRequests",
+    ),
+    path(
+        "requests/send/",
+        views.sendRequest,
+        name="sendRequest",
+    ),
+    path(
+        "requests/delete/",
+        views.deleteRequest,
+        name="deleteRequest",
+    ),
 ]

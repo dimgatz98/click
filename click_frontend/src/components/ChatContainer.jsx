@@ -11,7 +11,11 @@ import {
 } from "../utils/APIRoutes"
 import axios from 'axios';
 
-export default function ChatContainer({ currentChat, socket }) {
+export default function ChatContainer({ changeContacts, currentChat, socket }) {
+  const token = JSON.parse(localStorage.getItem(process.env.REACT_APP_STORAGE_TOKEN_KEY));
+  const headers = {
+    'Authorization': `Token ${token}`,
+  };
   const [messages, setMessages] = useState([]);
   const [arrivalMessage, setArrivalMessage] = useState(null);
   const [user, setUser] = useState(undefined);
@@ -19,12 +23,15 @@ export default function ChatContainer({ currentChat, socket }) {
   const scrollRef = useRef();
 
   const if401Logout = (response) => {
-    console.log(response);
     if (response.status === 401) {
       localStorage.clear();
       navigate("/login");
     }
   };
+
+  useEffect(() => {
+    arrivalMessage && setMessages((prev) => [...prev, arrivalMessage]);
+  }, [arrivalMessage]);
 
   useEffect(async () => {
     setUser(
@@ -35,12 +42,7 @@ export default function ChatContainer({ currentChat, socket }) {
   }, []);
 
   useEffect(async () => {
-    if (user) {
-      const token = JSON.parse(localStorage.getItem(process.env.REACT_APP_STORAGE_TOKEN_KEY));
-      const headers = {
-        'Authorization': `Token ${token}`,
-      };
-
+    if (user && currentChat) {
       const response = await axios.get(`${retrieveChatMessagesRoute}${currentChat.id}/`, { headers: headers })
         .catch((error) => {
           if401Logout(error.response)
@@ -55,16 +57,12 @@ export default function ChatContainer({ currentChat, socket }) {
 
   useEffect(() => {
     if (!localStorage.getItem(process.env.REACT_APP_STORAGE_USER_KEY)) {
+      localStorage.clear();
       navigate("/login");
     }
-  }, []);
+  }, [user]);
 
   const handleSendMsg = async (msg) => {
-    const token = JSON.parse(localStorage.getItem(process.env.REACT_APP_STORAGE_TOKEN_KEY));
-    const headers = {
-      'Authorization': `Token ${token}`,
-    };
-
     const messageData = {
       "text": msg,
       "chat": currentChat.id,
@@ -90,10 +88,12 @@ export default function ChatContainer({ currentChat, socket }) {
       .catch((error) => {
         if401Logout(error.response)
       });
+
     socket.current.send(JSON.stringify({
       'message': msg,
       'username': user.username,
     }));
+    console.log(socket.current);
 
     const msgs = [...messages];
     msgs.push({ fromSelf: true, message: msg });
@@ -103,7 +103,6 @@ export default function ChatContainer({ currentChat, socket }) {
   useEffect(() => {
     if (socket.current) {
       socket.current.onmessage = (e) => {
-        console.log(user, user.username);
         const data = JSON.parse(e.data);
         if (!(data.username === user.username)) {
           setArrivalMessage({ fromSelf: false, message: data.message });
@@ -111,10 +110,6 @@ export default function ChatContainer({ currentChat, socket }) {
       }
     }
   }, [socket.current]);
-
-  useEffect(() => {
-    arrivalMessage && setMessages((prev) => [...prev, arrivalMessage]);
-  }, [arrivalMessage]);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -125,7 +120,7 @@ export default function ChatContainer({ currentChat, socket }) {
       <div className="chat-header">
         <div className="user-details">
           <div className="chat-name">
-            <h3>{currentChat.username}</h3>
+            <h3>{(!currentChat === undefined) ? currentChat.username : ""}</h3>
           </div>
         </div>
         <Logout />

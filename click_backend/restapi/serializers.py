@@ -9,7 +9,8 @@ from .models import (
     User,
     Profile,
     Chat,
-    Message
+    Message,
+    FriendRequest,
 )
 
 
@@ -127,3 +128,29 @@ class ChatLastMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chat
         fields = ("last_message",)
+
+
+class FriendRequestSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = FriendRequest
+        fields = '__all__'
+
+    def create(self, validated_data):
+
+        friendRequest = FriendRequest.objects.create(
+            sent_from=validated_data['sent_from'],
+            received_from=validated_data['received_from'],
+        )
+
+        friendRequest.save()
+
+        return friendRequest
+
+
+class ListRequestSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    sent_from_id = serializers.UUIDField()
+    sent_from_username = serializers.CharField()
+    received_from_id = serializers.UUIDField()
+    received_from_username = serializers.CharField()
