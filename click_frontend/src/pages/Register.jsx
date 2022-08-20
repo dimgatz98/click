@@ -81,18 +81,18 @@ export default function Register() {
         requestData
       )
 
-      if (responseData.status === 200) {
+      if (responseData?.status === 200) {
         localStorage.setItem(
           process.env.REACT_APP_STORAGE_USER_KEY,
-          JSON.stringify(responseData.data.user)
+          JSON.stringify(responseData?.data?.user)
         );
         localStorage.setItem(
           process.env.REACT_APP_STORAGE_TOKEN_KEY,
-          JSON.stringify(responseData.data.token)
+          JSON.stringify(responseData?.data?.token)
         );
         navigate("/chat");
       } else {
-        toast.error(responseData.message, toastOptions);
+        toast.error(responseData?.message, toastOptions);
       }
     }
   };

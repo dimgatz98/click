@@ -44,14 +44,14 @@ export default function Chat() {
 
   useEffect(async () => {
     if (currentUser) {
-      const response = await axios.get(`${listChatsRoute}${currentUser.username}/`, { headers: headers })
+      const response = await axios.get(`${listChatsRoute}${currentUser?.username}/`, { headers: headers })
         .catch((error) => {
           if401Logout(error.response)
         });
       if (response) {
         const chats = response.data.map((chat) => {
-          for (const username of chat.participants) {
-            if (!(username === currentUser.username)) {
+          for (const username of chat?.participants) {
+            if (!(username === currentUser?.username)) {
               return {
                 username: username, id: chat.id
               };
@@ -70,10 +70,6 @@ export default function Chat() {
       socket.current = new WebSocket(
         `${webSocketRoute}${validID}/`
       );
-      socket.current.send(JSON.stringify({
-        'message': "Hello world",
-        'username': "username",
-      }));
     }
   }, [currentChat]);
 

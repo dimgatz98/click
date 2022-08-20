@@ -5,7 +5,6 @@ import Logout from "../components/Logout";
 
 export default function Welcome({ }) {
   const [user, setUser] = useState("");
-  const [username, setUsername] = useState("");
   useEffect(async () => {
     setUser(
       await JSON.parse(
@@ -13,14 +12,6 @@ export default function Welcome({ }) {
       )
     );
   }, []);
-
-  useEffect(async () => {
-    if (user) {
-      setUsername(
-        user.username
-      );
-    }
-  }, [user]);
 
   return (
     <Container>
@@ -31,7 +22,7 @@ export default function Welcome({ }) {
       <div className="chat-messages">
         <img src={Robot} alt="" />
         <h1>
-          Welcome, <span>{username}!</span>
+          Welcome, <span>{user?.username}!</span>
         </h1>
         <h3>Please select a chat to Start messaging.</h3>
       </div>

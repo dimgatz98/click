@@ -11,7 +11,7 @@ import {
 } from "../utils/APIRoutes"
 import axios from 'axios';
 
-export default function ChatContainer({ changeContacts, currentChat, socket }) {
+export default function ChatContainer({ currentChat, socket }) {
   const token = JSON.parse(localStorage.getItem(process.env.REACT_APP_STORAGE_TOKEN_KEY));
   const headers = {
     'Authorization': `Token ${token}`,
@@ -49,7 +49,7 @@ export default function ChatContainer({ changeContacts, currentChat, socket }) {
         });
 
       const existing_messages = response.data.map((dict) => {
-        return dict.sent_from === user.username ? { fromSelf: true, message: dict.text } : { fromSelf: false, message: dict.text };
+        return dict?.sent_from === user?.username ? { fromSelf: true, message: dict.text } : { fromSelf: false, message: dict.text };
       });
       setMessages(existing_messages);
     }
@@ -65,8 +65,8 @@ export default function ChatContainer({ changeContacts, currentChat, socket }) {
   const handleSendMsg = async (msg) => {
     const messageData = {
       "text": msg,
-      "chat": currentChat.id,
-      "sent_from": user.username,
+      "chat": currentChat?.id,
+      "sent_from": user?.username,
     };
 
     // save new message in db
@@ -84,7 +84,7 @@ export default function ChatContainer({ changeContacts, currentChat, socket }) {
       ("0" + m.getUTCSeconds()).slice(-2);
 
     // update last_message field in Chat model when new message is sent
-    await axios.patch(`${updateLastMessage}${currentChat.id}/`, { "last_message": dateString }, { headers: headers })
+    await axios.patch(`${updateLastMessage}${currentChat?.id}/`, { "last_message": dateString }, { headers: headers })
       .catch((error) => {
         if401Logout(error.response)
       });
@@ -93,7 +93,6 @@ export default function ChatContainer({ changeContacts, currentChat, socket }) {
       'message': msg,
       'username': user.username,
     }));
-    console.log(socket.current);
 
     const msgs = [...messages];
     msgs.push({ fromSelf: true, message: msg });
@@ -104,8 +103,8 @@ export default function ChatContainer({ changeContacts, currentChat, socket }) {
     if (socket.current) {
       socket.current.onmessage = (e) => {
         const data = JSON.parse(e.data);
-        if (!(data.username === user.username)) {
-          setArrivalMessage({ fromSelf: false, message: data.message });
+        if (!(data?.username === user?.username)) {
+          setArrivalMessage({ fromSelf: false, message: data?.message });
         }
       }
     }
@@ -120,7 +119,7 @@ export default function ChatContainer({ changeContacts, currentChat, socket }) {
       <div className="chat-header">
         <div className="user-details">
           <div className="chat-name">
-            <h3>{(!currentChat === undefined) ? currentChat.username : ""}</h3>
+            <h3>{currentChat?.username}</h3>
           </div>
         </div>
         <Logout />
@@ -130,11 +129,11 @@ export default function ChatContainer({ changeContacts, currentChat, socket }) {
           return (
             <div ref={scrollRef} key={uuidv4()}>
               <div
-                className={`message ${message.fromSelf ? "sended" : "recieved"
+                className={`message ${message?.fromSelf ? "sended" : "recieved"
                   }`}
               >
                 <div className="content ">
-                  <p>{message.message}</p>
+                  <p>{message?.message}</p>
                 </div>
               </div>
             </div>
