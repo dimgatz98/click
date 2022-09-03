@@ -1,3 +1,5 @@
+import "react-toastify/dist/ReactToastify.css";
+import { ToastContainer, toast } from "react-toastify";
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
@@ -18,13 +20,45 @@ export default function Chat() {
   const [currentChat, setCurrentChat] = useState(undefined);
   const [currentUser, setCurrentUser] = useState(undefined);
   const socket = useRef(undefined);
+  const friendRequestsSocket = useRef(undefined);
+  const contactsSocket = useRef(undefined);
 
   const navigate = useNavigate();
+
+  const toastOptions = {
+    position: "bottom-right",
+    autoClose: 8000,
+    pauseOnHover: true,
+    draggable: true,
+    theme: "dark",
+  };
 
   const if401Logout = (response) => {
     if (response.status === 401) {
       localStorage.clear();
       navigate("/login");
+    }
+  };
+
+  const retrieveContacts = async (user) => {
+    const response = await axios.get(`${listChatsRoute}${user?.username}/`, { headers: headers })
+      .catch((error) => {
+        if (!if401Logout(error.response)) {
+          toast.error(error.response?.data?.Error, toastOptions);
+        }
+      });
+    if (response) {
+      const chats = response.data.map((chat) => {
+        for (const username of chat?.participants) {
+          if (!(username === user?.username)) {
+            return {
+              username: username, id: chat.id
+            };
+          }
+        }
+      });
+
+      setContacts(chats);
     }
   };
 
@@ -44,25 +78,25 @@ export default function Chat() {
 
   useEffect(async () => {
     if (currentUser) {
-      const response = await axios.get(`${listChatsRoute}${currentUser?.username}/`, { headers: headers })
-        .catch((error) => {
-          if401Logout(error.response)
-        });
-      if (response) {
-        const chats = response.data.map((chat) => {
-          for (const username of chat?.participants) {
-            if (!(username === currentUser?.username)) {
-              return {
-                username: username, id: chat.id
-              };
-            }
-          }
-        });
+      retrieveContacts(currentUser);
 
-        setContacts(chats);
-      }
+      friendRequestsSocket.current = new WebSocket(
+        `${webSocketRoute}requests${currentUser?.username.replaceAll('-', '')}/`
+      );
+
+      contactsSocket.current = new WebSocket(
+        `${webSocketRoute}contacts${currentUser?.username.replaceAll('-', '')}/`
+      );
     }
   }, [currentUser]);
+
+  useEffect(async () => {
+    if (contactsSocket.current) {
+      contactsSocket.current.onmessage = (e) => {
+        retrieveContacts(currentUser);
+      }
+    }
+  }, [contactsSocket.current]);
 
   useEffect(async () => {
     if (currentChat) {
@@ -85,7 +119,7 @@ export default function Chat() {
     <>
       <Container>
         <div className="friend-requests">
-          <FriendRequests changeContacts={handleContactsChange} contacts={contacts} />
+          <FriendRequests changeContacts={handleContactsChange} contacts={contacts} requestsSocket={friendRequestsSocket} />
         </div>
         <div className="container">
           <Contacts contacts={contacts} changeChat={handleChatChange} />

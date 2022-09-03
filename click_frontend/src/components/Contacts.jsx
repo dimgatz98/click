@@ -1,3 +1,4 @@
+import "react-toastify/dist/ReactToastify.css";
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import Logo from "../media/logo.svg";
@@ -51,9 +52,7 @@ export default function Contacts({ contacts, changeChat }) {
             })}
           </div>
           <div className="current-user">
-            <div className="avatar">
-            </div>
-            <div className="username">
+            <div className="my-username">
               <h2>{username}</h2>
             </div>
           </div>
@@ -133,14 +132,16 @@ const Container = styled.div`
         max-inline-size: 100%;
       }
     }
-    .username {
+    .my-username {
+      display: flex;
+      align-items: center;
       h2 {
         color: white;
       }
     }
     @media screen and (min-width: 720px) and (max-width: 1080px) {
       gap: 0.5rem;
-      .username {
+      .my-username {
         h2 {
           font-size: 1rem;
         }

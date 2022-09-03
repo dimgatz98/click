@@ -1,3 +1,5 @@
+import "react-toastify/dist/ReactToastify.css";
+import { ToastContainer, toast } from "react-toastify";
 import React, { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import ChatInput from "./ChatInput";
@@ -22,6 +24,14 @@ export default function ChatContainer({ currentChat, socket }) {
   const navigate = useNavigate();
   const scrollRef = useRef();
 
+  const toastOptions = {
+    position: "bottom-right",
+    autoClose: 8000,
+    pauseOnHover: true,
+    draggable: true,
+    theme: "dark",
+  };
+
   const if401Logout = (response) => {
     if (response.status === 401) {
       localStorage.clear();
@@ -45,7 +55,9 @@ export default function ChatContainer({ currentChat, socket }) {
     if (user && currentChat) {
       const response = await axios.get(`${retrieveChatMessagesRoute}${currentChat.id}/`, { headers: headers })
         .catch((error) => {
-          if401Logout(error.response)
+          if (!if401Logout(error.response)) {
+            toast.error(error.response?.data?.Error, toastOptions);
+          }
         });
 
       const existing_messages = response.data.map((dict) => {
@@ -72,7 +84,9 @@ export default function ChatContainer({ currentChat, socket }) {
     // save new message in db
     await axios.post(`${saveMessageRoute}`, messageData, { headers: headers })
       .catch((error) => {
-        if401Logout(error.response)
+        if (!if401Logout(error.response)) {
+          toast.error(error.response?.data?.Error, toastOptions);
+        }
       });
     const m = new Date();
     const dateString =
@@ -86,12 +100,14 @@ export default function ChatContainer({ currentChat, socket }) {
     // update last_message field in Chat model when new message is sent
     await axios.patch(`${updateLastMessage}${currentChat?.id}/`, { "last_message": dateString }, { headers: headers })
       .catch((error) => {
-        if401Logout(error.response)
+        if (!if401Logout(error.response)) {
+          toast.error(error.response?.data?.Error, toastOptions);
+        }
       });
 
-    socket.current.send(JSON.stringify({
+    socket.current?.send(JSON.stringify({
       'message': msg,
-      'username': user.username,
+      'username': user?.username,
     }));
 
     const msgs = [...messages];

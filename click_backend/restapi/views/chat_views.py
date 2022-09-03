@@ -306,7 +306,6 @@ class DeleteRequestView(generics.DestroyAPIView):
 
     def delete(self, request, *args, **kwargs):
         try:
-            print(request.data)
             self.kwargs["id"] = request.data['id']
             return super().delete(request, *args, **kwargs)
         except Exception as e:

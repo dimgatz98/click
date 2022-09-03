@@ -39,6 +39,12 @@ export default function Login() {
     return true;
   };
 
+  const if401Logout = (response) => {
+    if (response.status === 401) {
+      localStorage.clear();
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (validateForm()) {
@@ -52,7 +58,13 @@ export default function Login() {
       const responseData = await axios.post(
         loginRoute,
         requestData
-      );
+      )
+        .catch((error) => {
+          if (!if401Logout(error.response)) {
+            toast.error(error.response?.data?.Error, toastOptions);
+          }
+        }
+        );
 
       if (responseData.status === 200) {
         localStorage.setItem(

@@ -57,7 +57,7 @@ class CreateUserAPIView(generics.CreateAPIView):
 
             return Response({
                 "user": UserSerializer(user, context=self.get_serializer_context()).data,
-                "token": token[1]
+                "token": token[1],
             })
 
         except Exception as e:
@@ -90,7 +90,7 @@ class SignInAPIView(generics.GenericAPIView):
             print(e)
 
             err_msg = {
-                "Error": "Invalid data"
+                "Error": "Invalid credentials"
             }
             return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
 
@@ -106,7 +106,8 @@ class SignOutAPIView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
 
         knox_object, err_msg = get_token(
-            request.headers.copy(), *args, **kwargs)
+            request.headers.copy(), *args, **kwargs,
+        )
         if not err_msg is None:
             return Response(
                 data=err_msg,
@@ -115,16 +116,16 @@ class SignOutAPIView(generics.GenericAPIView):
 
         knox_object.delete()
 
-        err_msg = {
+        data = {
             "Error": "Token deleted successfuly"
         }
         return Response(
-            data=err_msg,
+            data=data,
             status=status.HTTP_200_OK,
         )
 
 
-class ListUserAPIView(generics.ListAPIView):
+class ListUsersAPIView(generics.ListAPIView):
     '''
     View called to list all existing users
     '''
@@ -177,7 +178,7 @@ class DeleteUserAPIView(generics.DestroyAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # A user is only allowed to delete the account if they have the corresponding token
+        # A user is only allowed to delete an account if they have the corresponding token
         if user.username == token_user.username:
             resp = super().delete(self, request, *args, **kwargs)
             return resp
@@ -235,6 +236,29 @@ class AddContactView(generics.UpdateAPIView):
         return generics.get_object_or_404(Profile, user=user_id)
 
 
+class RetrieveProfileView(generics.RetrieveAPIView):
+    '''
+    View called to retrieve profile for a specific user based on authorization header
+    '''
+    permission_classes = [
+        permissions.IsAuthenticated
+    ]
+    serializer_class = ProfileSerializer
+    queryset = Profile.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        user, err = get_user_from_token(request.headers.copy())
+        if (err is not None):
+            return Response(data=err, status=status.HTTP_400_BAD_REQUEST)
+
+        self.kwargs["user"] = user
+        return super().get(request, *args, **kwargs)
+
+    def get_object(self):
+        user_id = self.kwargs["user"].id
+        return generics.get_object_or_404(Profile, user=user_id)
+
+
 class ListContactsAPIView(generics.RetrieveAPIView):
     '''
     View called to list all contacts of a specific user
@@ -265,7 +289,8 @@ signIn = SignInAPIView.as_view()
 signOut = SignOutAPIView.as_view()
 deleteUser = DeleteUserAPIView.as_view()
 retrieveUser = RetrieveUserAPIView.as_view()
-listUsers = ListUserAPIView.as_view()
+listUsers = ListUsersAPIView.as_view()
 createUser = CreateUserAPIView.as_view()
 addContact = AddContactView.as_view()
 listContacts = ListContactsAPIView.as_view()
+retrieveProfile = RetrieveProfileView.as_view()

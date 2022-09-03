@@ -1,5 +1,3 @@
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Checkmark } from 'react-checkmark'
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer, toast } from "react-toastify";
 import { IoMdSend } from "react-icons/io";
@@ -15,10 +13,11 @@ import {
     listChatsRoute,
     requestsDeleteRoute,
     sendRequestRoute,
+    webSocketRoute,
 } from "../utils/APIRoutes"
 import axios from 'axios';
 
-export default function FriendRequests({ changeContacts }) {
+export default function FriendRequests({ changeContacts, requestsSocket }) {
     const token = JSON.parse(localStorage.getItem(process.env.REACT_APP_STORAGE_TOKEN_KEY));
     const headers = {
         "Authorization": `Token ${token}`,
@@ -42,6 +41,17 @@ export default function FriendRequests({ changeContacts }) {
             navigate("/login");
         }
     };
+
+    const listRequests = async () => {
+        const response = await axios.get(`${requestsListRoute}`, { headers: headers })
+            .catch((error) => {
+                if (!if401Logout(error.response)) {
+                    toast.error(error.response?.data?.Error, toastOptions);
+                }
+            });
+        setRequests(response?.data);
+    };
+
     const addFriend = (event) => {
         event.preventDefault();
         if (friendUsername.length > 0) {
@@ -54,9 +64,22 @@ export default function FriendRequests({ changeContacts }) {
         axios.post(`${sendRequestRoute}`, { received_from: username }, { headers: headers })
             .catch((error) => {
                 if (!if401Logout(error.response)) {
-                    toast.error(error.response?.data?.Error, toastOptions);
+                    if (!if401Logout(error.response)) {
+                        toast.error(error.response?.data?.Error, toastOptions);
+                    }
                 }
             });
+
+        const sendRequestSocket = new WebSocket(
+            `${webSocketRoute}requests${username.replaceAll('-', '')}/`
+        );
+
+        sendRequestSocket.addEventListener('open', () => {
+            sendRequestSocket.send(JSON.stringify({
+                'message': "add",
+                'username': user?.username,
+            }));
+        });
     };
 
     useEffect(() => {
@@ -69,15 +92,17 @@ export default function FriendRequests({ changeContacts }) {
                 JSON.parse(localStorage.getItem(process.env.REACT_APP_STORAGE_USER_KEY))
             );
         }
+
+        listRequests();
     }, []);
 
-    useEffect(async () => {
-        const response = await axios.get(`${requestsListRoute}`, { headers: headers })
-            .catch((error) => {
-                if401Logout(error.response);
-            });
-        setRequests(response?.data);
-    }, []);
+    useEffect(() => {
+        if (requestsSocket.current) {
+            requestsSocket.current.onmessage = () => {
+                listRequests();
+            };
+        }
+    }, [requestsSocket.current]);
 
     useEffect(() => {
         scrollRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -127,6 +152,7 @@ export default function FriendRequests({ changeContacts }) {
                         toast.error(error.response?.data?.Error, toastOptions);
                     }
                 });
+
             const chats = response.data.map((chat) => {
                 for (const username of chat?.participants) {
                     if (!(username === user.username)) {
@@ -139,6 +165,15 @@ export default function FriendRequests({ changeContacts }) {
 
             setRequests(newRequests);
             changeContacts(chats);
+
+            const accptedRequestSocket = new WebSocket(`${webSocketRoute}contacts${r?.sent_from_username.replaceAll('-', '')}/`);
+
+            accptedRequestSocket.addEventListener('open', () => {
+                accptedRequestSocket.send(JSON.stringify({
+                    'message': "accepted",
+                    'username': user?.username,
+                }));
+            });
         }
     };
 

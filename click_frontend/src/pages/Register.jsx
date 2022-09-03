@@ -16,6 +16,7 @@ export default function Register() {
     draggable: true,
     theme: "dark",
   };
+
   const [values, setValues] = useState({
     firstName: "",
     lastName: "",
@@ -24,6 +25,12 @@ export default function Register() {
     password: "",
     confirmPassword: "",
   });
+
+  const if401Logout = (response) => {
+    if (response.status === 401) {
+      localStorage.clear();
+    }
+  };
 
   useEffect(() => {
     if (localStorage.getItem(process.env.REACT_APP_STORAGE_TOKEN_KEY)) {
@@ -80,6 +87,11 @@ export default function Register() {
         registerRoute,
         requestData
       )
+        .catch((error) => {
+          if (!if401Logout(error.response)) {
+            toast.error(error.response?.data?.Error, toastOptions);
+          }
+        });
 
       if (responseData?.status === 200) {
         localStorage.setItem(
@@ -92,7 +104,7 @@ export default function Register() {
         );
         navigate("/chat");
       } else {
-        toast.error(responseData?.message, toastOptions);
+        toast.error(responseData?.data?.Error, toastOptions);
       }
     }
   };
