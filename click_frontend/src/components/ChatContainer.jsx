@@ -81,7 +81,6 @@ export default function ChatContainer({ currentChat, socket }) {
       "sent_from": user?.username,
     };
 
-    // save new message in db
     await axios.post(`${saveMessageRoute}`, messageData, { headers: headers })
       .catch((error) => {
         if (!if401Logout(error.response)) {
@@ -97,7 +96,6 @@ export default function ChatContainer({ currentChat, socket }) {
       ("0" + m.getUTCMinutes()).slice(-2) + ":" +
       ("0" + m.getUTCSeconds()).slice(-2);
 
-    // update last_message field in Chat model when new message is sent
     await axios.patch(`${updateLastMessage}${currentChat?.id}/`, { "last_message": dateString }, { headers: headers })
       .catch((error) => {
         if (!if401Logout(error.response)) {

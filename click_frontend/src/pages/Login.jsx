@@ -9,7 +9,6 @@ import { loginRoute } from "../utils/APIRoutes";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [values, setValues] = useState({ username: "", password: "" });
   const toastOptions = {
     position: "bottom-right",
     autoClose: 8000,
@@ -23,17 +22,12 @@ export default function Login() {
     }
   }, []);
 
-  const handleChange = (event) => {
-    setValues({ ...values, [event.target.name]: event.target.value });
-  };
-
-  const validateForm = () => {
-    const { username, password } = values;
-    if (username === "") {
-      toast.error("Email and Password is required.", toastOptions);
+  const validateForm = (data) => {
+    if (data?.username === "") {
+      toast.error("Username and Password are required.", toastOptions);
       return false;
-    } else if (password === "") {
-      toast.error("Email and Password is required.", toastOptions);
+    } else if (data?.password === "") {
+      toast.error("Username and Password are required.", toastOptions);
       return false;
     }
     return true;
@@ -47,14 +41,14 @@ export default function Login() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (validateForm()) {
-      const { username, password } = values;
-
-      const requestData = {
-        username,
-        password,
+    let requestData = {};
+    Array.from(event?.target?.children).forEach((elem) => {
+      if (elem?.className === "input_data") {
+        requestData[elem?.name] = elem?.value;
       }
+    });
 
+    if (validateForm(requestData)) {
       const responseData = await axios.post(
         loginRoute,
         requestData
@@ -92,17 +86,17 @@ export default function Login() {
             <h1>click</h1>
           </div>
           <input
+            className="input_data"
             type="text"
             placeholder="Username"
             name="username"
-            onChange={(e) => handleChange(e)}
             min="3"
           />
           <input
+            className="input_data"
             type="password"
             placeholder="Password"
             name="password"
-            onChange={(e) => handleChange(e)}
           />
           <button type="submit">Log In</button>
           <span>

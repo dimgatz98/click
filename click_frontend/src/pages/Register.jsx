@@ -9,6 +9,7 @@ import { registerRoute } from "../utils/APIRoutes";
 
 export default function Register() {
   const navigate = useNavigate();
+
   const toastOptions = {
     position: "bottom-right",
     autoClose: 8000,
@@ -16,15 +17,6 @@ export default function Register() {
     draggable: true,
     theme: "dark",
   };
-
-  const [values, setValues] = useState({
-    firstName: "",
-    lastName: "",
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
 
   const if401Logout = (response) => {
     if (response.status === 401) {
@@ -38,31 +30,26 @@ export default function Register() {
     }
   }, []);
 
-  const handleChange = (event) => {
-    setValues({ ...values, [event.target.name]: event.target.value });
-  };
-
-  const handleValidation = () => {
-    const { password, confirmPassword, username, email } = values;
-    if (password !== confirmPassword) {
+  const handleValidation = (data) => {
+    if (data?.password !== data?.confirmPassword) {
       toast.error(
         "Password and confirm password should be same.",
         toastOptions
       );
       return false;
-    } else if (username.length < 3) {
+    } else if (data?.username.length < 3) {
       toast.error(
         "Username should be greater than 3 characters.",
         toastOptions
       );
       return false;
-    } else if (password.length < 8) {
+    } else if (data?.password.length < 8) {
       toast.error(
         "Password should be equal or greater than 8 characters.",
         toastOptions
       );
       return false;
-    } else if (email === "") {
+    } else if (data?.email === "") {
       toast.error("Email is required.", toastOptions);
       return false;
     }
@@ -72,17 +59,14 @@ export default function Register() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (handleValidation()) {
-      const { firstName, lastName, username, email, password } = values;
-
-      const requestData = {
-        "first_name": firstName,
-        "last_name": lastName,
-        "username": username,
-        "email": email,
-        "password": password,
+    let requestData = {};
+    Array.from(event?.target?.children).forEach((elem) => {
+      if (elem?.className === "input_data") {
+        requestData[elem?.name] = elem?.value;
       }
+    });
 
+    if (handleValidation(requestData)) {
       const responseData = await axios.post(
         registerRoute,
         requestData
@@ -118,40 +102,40 @@ export default function Register() {
             <h1>click</h1>
           </div>
           <input
+            className="input_data"
             type="text"
             placeholder="Username"
             name="username"
-            onChange={(e) => handleChange(e)}
           />
           <input
+            className="input_data"
             type="text"
             placeholder="First Name"
-            name="firstName"
-            onChange={(e) => handleChange(e)}
+            name="first_name"
           />
           <input
+            className="input_data"
             type="text"
             placeholder="Last Name"
-            name="lastName"
-            onChange={(e) => handleChange(e)}
+            name="last_name"
           />
           <input
+            className="input_data"
             type="email"
             placeholder="Email"
             name="email"
-            onChange={(e) => handleChange(e)}
           />
           <input
+            className="input_data"
             type="password"
             placeholder="Password"
             name="password"
-            onChange={(e) => handleChange(e)}
           />
           <input
+            className="input_data"
             type="password"
             placeholder="Confirm Password"
             name="confirmPassword"
-            onChange={(e) => handleChange(e)}
           />
           <button type="submit">Create User</button>
           <span>
